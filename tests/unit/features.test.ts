@@ -7,7 +7,7 @@ import { sameFields } from '@/features/notes/useNoteEditor';
 import { filterNotes } from '@/features/notes/NotesPage';
 import { filterTasks, sortTasks } from '@/features/tasks/TasksPage';
 import { EMPTY_TASK, isOverdue, nextRecurringTask } from '@/repositories/tasks';
-import { deriveStatus, syncStore, trackWrite } from '@/lib/sync/syncStore';
+import { deriveStatus, OfflineWriteError, requireConnection, syncStore, trackWrite } from '@/lib/sync/syncStore';
 import type { Bookmark, CalendarEvent, Note, Task } from '@/types/models';
 
 const now = new Date('2024-03-10T08:00:00');
@@ -148,7 +148,7 @@ describe('sync status', () => {
     syncStore.reset();
     syncStore.setOnline(true);
     let resolve!: () => void;
-    const p = trackWrite(new Promise<void>((r) => (resolve = r)));
+    const p = trackWrite(() => new Promise<void>((r) => (resolve = r)));
     expect(deriveStatus(syncStore.getState())).toBe('syncing');
     syncStore.setOnline(false);
     expect(deriveStatus(syncStore.getState())).toBe('offline-pending');
@@ -159,13 +159,34 @@ describe('sync status', () => {
     expect(deriveStatus(syncStore.getState())).toBe('synced');
   });
 
-  it('reports pending writes seen in snapshots (e.g. queued before a reload)', () => {
+  it('reports pending writes seen in snapshots', () => {
     syncStore.reset();
     syncStore.reportSnapshot('k', { hasPendingWrites: true, fromCache: true });
     expect(deriveStatus(syncStore.getState())).toBe('syncing');
     syncStore.reportSnapshot('k', { hasPendingWrites: false, fromCache: false });
     expect(deriveStatus(syncStore.getState())).toBe('synced');
     expect(syncStore.getState().lastSyncedAt).not.toBeNull();
+  });
+
+  it('shows "connecting" while a listener only has unconfirmed data', () => {
+    syncStore.reset();
+    syncStore.setOnline(true);
+    syncStore.reportSnapshot('k', { hasPendingWrites: false, fromCache: true });
+    expect(deriveStatus(syncStore.getState())).toBe('connecting');
+    syncStore.reportSnapshot('k', { hasPendingWrites: false, fromCache: false });
+    expect(deriveStatus(syncStore.getState())).toBe('synced');
+  });
+
+  it('refuses writes while offline without starting them', async () => {
+    syncStore.reset();
+    syncStore.setOnline(false);
+    const start = vi.fn(() => Promise.resolve());
+    await expect(trackWrite(start, { silent: true })).rejects.toBeInstanceOf(OfflineWriteError);
+    expect(start).not.toHaveBeenCalled();
+    expect(syncStore.getState().inFlightWrites).toBe(0);
+    expect(() => requireConnection()).toThrow(/offline/i);
+    syncStore.setOnline(true);
+    expect(() => requireConnection()).not.toThrow();
   });
 });
 

@@ -37,11 +37,10 @@ export function BackupSection() {
   const doExport = async () => {
     setBusy('export');
     try {
-      const offline = !navigator.onLine;
-      const backup = await exportAll(db, uid, prefs, __APP_VERSION__, offline);
+      const backup = await exportAll(db, uid, prefs, __APP_VERSION__);
       const count = COLLECTIONS.reduce((n, c) => n + backup.data[c].length, 0);
       downloadText(`personal-hub-backup-${todayStr()}.json`, JSON.stringify(backup, null, 2), 'application/json');
-      toast.success(`Exported ${count} items${offline ? ' (from this device’s offline copy)' : ''}`);
+      toast.success(`Exported ${count} items from Firestore`);
     } catch (e) {
       toast.error(`Export failed: ${friendlyDataError(e)}`);
     } finally {

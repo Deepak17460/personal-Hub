@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import { createNote, noteFieldsOf, saveNote } from '@/repositories/notes';
 import { deleteRecord } from '@/repositories/records';
-import { syncStore } from '@/lib/sync/syncStore';
+import { isOnline, syncStore } from '@/lib/sync/syncStore';
 import type { Note, NoteFields } from '@/types/models';
 import { cancelDiscard, isBlankNote, isFresh, scheduleDiscard } from './freshNotes';
 
@@ -83,6 +83,8 @@ export function useNoteEditor(db: Firestore, uid: string, note: Note | null | un
     const fields = draftRef.current;
     if (!id || latestNote.current === null || !fields || conflictRef.current || !headRevRef.current) return;
     if (sameFields(fields, baseRef.current)) return;
+    // Offline: keep the draft in the editor (state stays "unsaved") and save on reconnect.
+    if (!isOnline()) return;
     const result = saveNote(db, uid, id, headRevRef.current, fields, {
       onRejected: (attempted) => {
         if (!mounted.current) return false;
@@ -143,14 +145,22 @@ export function useNoteEditor(db: Firestore, uid: string, note: Note | null | un
     };
   }, [noteId, flush, db, uid]);
 
-  // Save when the tab is hidden or closed.
+  // Save when the tab is hidden or closed, and when the connection returns.
   useEffect(() => {
     const onHide = () => document.visibilityState === 'hidden' && flush();
+    const onUnload = (e: BeforeUnloadEvent) => {
+      const fields = draftRef.current;
+      if (fields && !conflictRef.current && !sameFields(fields, baseRef.current) && !isOnline()) e.preventDefault();
+    };
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('pagehide', flush);
+    window.addEventListener('online', flush);
+    window.addEventListener('beforeunload', onUnload);
     return () => {
       document.removeEventListener('visibilitychange', onHide);
       window.removeEventListener('pagehide', flush);
+      window.removeEventListener('online', flush);
+      window.removeEventListener('beforeunload', onUnload);
     };
   }, [flush]);
 

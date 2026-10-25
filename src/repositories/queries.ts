@@ -1,7 +1,6 @@
 import {
   getCountFromServer,
-  getDocs,
-  getDocsFromCache,
+  getDocsFromServer,
   limit,
   orderBy,
   query,
@@ -11,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import type { CollectionName, RecordOf } from '@/types/models';
 import { matchesAllTerms, primaryTerm, queryTerms } from '@/utils/searchTokens';
+import { requireConnection } from '@/lib/sync/syncStore';
 import { mapSnapshot } from './mappers';
 import { colRef } from './paths';
 
@@ -64,7 +64,7 @@ export async function fetchTaskCounts(db: Firestore, uid: string, today: string)
 
 /**
  * Indexed search: one `array-contains` query on the most selective term, remaining terms
- * filtered client-side. Falls back to the local cache while offline.
+ * filtered client-side. Always answered by the Firestore server; fails while offline.
  */
 export async function searchCollection<C extends CollectionName>(
   db: Firestore,
@@ -76,9 +76,9 @@ export async function searchCollection<C extends CollectionName>(
   const terms = queryTerms(text);
   const term = primaryTerm(terms);
   if (!term) return [];
+  requireConnection();
   const q = query(colRef(db, uid, c), where('searchTokens', 'array-contains', term), limit(max * 3));
-  const online = typeof navigator === 'undefined' || navigator.onLine;
-  const snap = online ? await getDocs(q) : await getDocsFromCache(q);
+  const snap = await getDocsFromServer(q);
   return snap.docs
     .filter((d) => matchesAllTerms(d.get('searchTokens') as string[] | undefined, terms))
     .slice(0, max)

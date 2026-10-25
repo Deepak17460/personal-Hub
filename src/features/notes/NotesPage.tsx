@@ -71,7 +71,7 @@ export default function NotesPage() {
       <div className={cn(noteId && 'hidden lg:block')}>
         <PageHeader
           title="Notes"
-          description="Markdown notes with autosave. Works offline and syncs across devices."
+          description="Markdown notes with autosave, stored in Firestore and synced across devices."
           actions={
             <Button icon={<Plus className="h-4 w-4" />} onClick={newNote}>
               New note

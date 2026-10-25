@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, LogOut, ShieldAlert, WifiOff } from 'lucide-react';
@@ -29,6 +29,14 @@ export function RequireOwner({ children }: { children: ReactNode }) {
     gcTime: Infinity,
   });
 
+  const { refetch, isError } = probe;
+  useEffect(() => {
+    if (!isError) return;
+    const retry = () => void refetch();
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [isError, refetch]);
+
   if (loading) return <FullScreenLoader label="Checking your session…" />;
   if (!user) return <Navigate to="/signin" replace state={{ from: location.pathname }} />;
   if (probe.isPending) return <FullScreenLoader label="Opening your workspace…" />;
@@ -42,7 +50,7 @@ export function RequireOwner({ children }: { children: ReactNode }) {
       <StatusScreen
         icon={<WifiOff className="h-6 w-6" />}
         title="Can't reach your workspace"
-        message="You appear to be offline and this device has no saved copy of your data yet. Connect to the internet once to enable offline access."
+        message="Your data is stored only in Firestore, and it could not be reached. Check your internet connection and try again."
         action={<Button onClick={() => void probe.refetch()}>Try again</Button>}
       />
     );

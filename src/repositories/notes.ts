@@ -2,7 +2,7 @@ import { serverTimestamp, setDoc, type DocumentData, type Firestore } from 'fire
 import { noteFieldsSchema } from '@/schemas/entities';
 import { dedupeTags } from '@/schemas/common';
 import { errorCode } from '@/lib/firebase/errors';
-import { syncStore, trackWrite } from '@/lib/sync/syncStore';
+import { OfflineWriteError, syncStore, trackWrite } from '@/lib/sync/syncStore';
 import type { Note, NoteFields } from '@/types/models';
 import { randomId } from '@/utils/ids';
 import { SCHEMA_VERSION, tokensFor } from './mappers';
@@ -62,7 +62,7 @@ export function createNote(db: Firestore, uid: string, fields: NoteFields, opts:
   const id = opts.id ?? newDocId(db, uid, 'notes');
   const revId = randomId();
   const data = buildNoteCreateData(id, fields, revId, opts);
-  return { id, revId, done: trackWrite(setDoc(docRef(db, uid, 'notes', id), data)) };
+  return { id, revId, done: trackWrite(() => setDoc(docRef(db, uid, 'notes', id), data)) };
 }
 
 export function buildNoteUpdateData(fields: NoteFields, prevRevId: string, revId: string): DocumentData {
@@ -94,8 +94,8 @@ export function saveNote(
 ): NoteWriteResult {
   const revId = randomId();
   const data = buildNoteUpdateData(fields, prevRevId, revId);
-  const write = setDoc(docRef(db, uid, 'notes', id), data, { merge: true });
-  const done = trackWrite(write, { silent: true }).catch((error: unknown) => {
+  const done = trackWrite(() => setDoc(docRef(db, uid, 'notes', id), data, { merge: true }), { silent: true }).catch((error: unknown) => {
+    if (error instanceof OfflineWriteError) throw error;
     if (errorCode(error) !== 'permission-denied') {
       syncStore.emit({ type: 'error', message: 'A note change could not be saved.' });
       throw error;

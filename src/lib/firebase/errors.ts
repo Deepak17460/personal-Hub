@@ -32,7 +32,9 @@ export function friendlyDataError(error: unknown): string {
     case 'permission-denied':
       return 'Permission denied. The change was rejected by the security rules.';
     case 'unavailable':
-      return 'The database is unreachable. Changes will sync when you are back online.';
+      return 'Firestore is unreachable. Check your connection and try again.';
+    case 'offline':
+      return error instanceof Error ? error.message : 'You are offline.';
     case 'resource-exhausted':
       return 'The free-tier quota has been reached for today. Try again later.';
     case 'failed-precondition':

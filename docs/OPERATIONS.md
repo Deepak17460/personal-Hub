@@ -35,7 +35,7 @@ URL) are skipped, except with "Keep both". "Also restore settings" additionally 
 widgets and notification preferences. Restoring into a brand-new Firebase project works the same way after
 the owner bootstrap.
 
-Imports work offline too (queued like normal edits), but large imports are best done online.
+Export and import need a connection: both read directly from Firestore (never from a local copy).
 
 ## Routine maintenance
 
@@ -60,19 +60,20 @@ devices and are worth repeating after significant updates.
 
 1. **Sync**: create a note on A → it appears on B within seconds. Edit on B → A updates while the
    note is open (no unsaved local edits on A).
-2. **Offline queue**: put B in airplane mode. Create a task and edit a note. Indicator shows
-   "Offline · changes pending". Close and reopen the app on B while still offline → data and
-   pending changes are still there. Turn airplane mode off → indicator becomes **Synced** and A
-   shows the changes.
-3. **Conflict**: open the same note on A and B. Put A offline and change its title. On B
-   (online) change the same note. Bring A online → A shows "This note was changed on another
+2. **Offline block**: put B in airplane mode. The offline banner appears, forms and buttons are
+   disabled, and the indicator shows **Offline**. Reopen the app while offline → the shell
+   opens but says Firestore can't be reached. Turn airplane mode off → it loads and shows
+   **Synced**.
+3. **Conflict**: open the same note on A and B. On A, start typing, then put A offline mid-edit
+   (the editor shows "Offline · not saved yet"). On B (online) change the same note. Bring A
+   online → A's draft saves and A shows "This note was changed on another
    device" with Keep mine / Use other version / Keep both. Pick **Keep both** → both versions
    exist as notes on both devices.
 4. **Recurring task**: create a weekly task due today, complete it → next week's task appears.
 5. **Reminders**: create an event 2 minutes ahead with the reminder "At start time"; keep the
    app open → an in-app reminder appears (and a system notification if enabled and permitted).
    With the app fully closed, expect **no** reminder — this is a documented limitation.
-6. **Install/PWA**: install on the phone, open from the home screen in airplane mode → app opens.
+6. **Install/PWA**: install on the phone, open from the home screen in airplane mode → the app shell opens with an offline message.
 7. **Update**: deploy a change → open app shows "A new version is available" → Reload.
 8. **Backup round-trip**: export, delete one test item, import with "Skip" → the item returns and
    nothing else changes.

@@ -47,5 +47,5 @@ export async function loadPreferences(db: Firestore, uid: string): Promise<Prefe
 
 export function savePreferences(db: Firestore, uid: string, prefs: Preferences): Promise<void> {
   const valid = preferencesSchema.parse(prefs);
-  return trackWrite(setDoc(preferencesRef(db, uid), { ...valid, updatedAt: serverTimestamp() }));
+  return trackWrite(() => setDoc(preferencesRef(db, uid), { ...valid, updatedAt: serverTimestamp() }));
 }

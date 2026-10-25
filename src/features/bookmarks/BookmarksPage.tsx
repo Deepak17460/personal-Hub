@@ -8,6 +8,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
 import { useSession } from '@/features/auth/session';
 import { usePagedCollection, useSearch } from '@/hooks/useData';
+import { errorCode, friendlyDataError } from '@/lib/firebase/errors';
 import { fetchAll } from '@/repositories/backup';
 import { createRecord, deleteRecord, updateRecord } from '@/repositories/records';
 import type { Bookmark } from '@/types/models';
@@ -63,11 +64,11 @@ export default function BookmarksPage() {
   const exportHtml = async () => {
     setBusy(true);
     try {
-      const rows = await fetchAll(db, uid, 'bookmarks', { fromCache: !navigator.onLine });
+      const rows = await fetchAll(db, uid, 'bookmarks');
       downloadText(`bookmarks-${todayStr()}.html`, toBookmarkHtml(rows), 'text/html');
       toast.success(`Exported ${rows.length} bookmarks`);
-    } catch {
-      toast.error('Export failed.');
+    } catch (e) {
+      toast.error(`Export failed: ${friendlyDataError(e)}`);
     } finally {
       setBusy(false);
     }
@@ -85,7 +86,7 @@ export default function BookmarksPage() {
         toast.warning('No http(s) bookmarks found in that file.');
         return;
       }
-      const existing = await fetchAll(db, uid, 'bookmarks', { fromCache: !navigator.onLine });
+      const existing = await fetchAll(db, uid, 'bookmarks');
       const { fresh, duplicates } = dedupeBookmarks(incoming, existing);
       const ok = await confirm({
         title: 'Import bookmarks?',
@@ -95,8 +96,8 @@ export default function BookmarksPage() {
       if (!ok) return;
       for (const b of fresh.slice(0, 2000)) createRecord(db, uid, 'bookmarks', b);
       toast.success(`Imported ${Math.min(fresh.length, 2000)} bookmarks`);
-    } catch {
-      toast.error('That file could not be read as a bookmarks export.');
+    } catch (e) {
+      toast.error(errorCode(e) ? `Import failed: ${friendlyDataError(e)}` : 'That file could not be read as a bookmarks export.');
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = '';

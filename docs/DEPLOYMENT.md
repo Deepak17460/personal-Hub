@@ -174,8 +174,9 @@ On the deployed URL (`*.web.app` or your custom domain):
 - [ ] Sign in with a different Google account in a private window: "This account is not
       authorised", no data.
 - [ ] Create a note, task, bookmark, document link and event; reload — all persist.
-- [ ] DevTools → Network → **Offline**: edit a note → "waiting to sync"; reload while offline →
-      app still opens; go online → indicator returns to **Synced**.
+- [ ] DevTools → Network → **Offline**: the offline banner appears and forms are disabled; a note
+      being typed shows "Offline · not saved yet"; go online → it saves and the indicator returns
+      to **Synced**. DevTools → Application → IndexedDB has no `firestore/…` database.
 - [ ] Settings → **Sign out** returns to the sign-in page; **Export everything** downloads JSON.
 
 Record what you checked. Until this list passes on the real domain, treat the deployment as

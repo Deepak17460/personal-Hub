@@ -87,7 +87,7 @@ export function createRecord<C extends SimpleCollection>(
 ): WriteResult {
   const id = opts.id ?? newDocId(db, uid, collection);
   const data = buildCreateData(collection, id, fields, opts);
-  return { id, done: trackWrite(setDoc(docRef(db, uid, collection, id), data)) };
+  return { id, done: trackWrite(() => setDoc(docRef(db, uid, collection, id), data)) };
 }
 
 /**
@@ -113,11 +113,11 @@ export function updateRecord<C extends SimpleCollection>(
     searchTokens: tokensFor(collection, valid),
     updatedAt: serverTimestamp(),
   };
-  return { id, done: trackWrite(setDoc(docRef(db, uid, collection, id), data, { merge: true })) };
+  return { id, done: trackWrite(() => setDoc(docRef(db, uid, collection, id), data, { merge: true })) };
 }
 
 export function deleteRecord(db: Firestore, uid: string, collection: CollectionName, id: string): WriteResult {
-  return { id, done: trackWrite(deleteDoc(docRef(db, uid, collection, id))) };
+  return { id, done: trackWrite(() => deleteDoc(docRef(db, uid, collection, id))) };
 }
 
 const FIELD_KEYS: { [C in SimpleCollection]: (keyof FieldsOf[C])[] } = {

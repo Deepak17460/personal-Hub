@@ -1,6 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
 import {
   AlarmClock,
   Bookmark as BookmarkIcon,
@@ -8,28 +7,28 @@ import {
   CheckCircle2,
   CheckSquare,
   Clock,
+  Cloud,
   ExternalLink,
   FilePlus2,
   FileText,
   FolderOpen,
   History,
-  HardDrive,
   ListTodo,
   Plus,
   Star,
   TriangleAlert,
 } from 'lucide-react';
 import { Card, CardHeader, EmptyState, ListSkeleton, Badge } from '@/components/ui/Display';
-import { SyncIndicator, SYNC_COPY } from '@/components/layout/SyncIndicator';
+import { SyncDetails, SyncIndicator } from '@/components/layout/SyncIndicator';
 import { useSession } from '@/features/auth/session';
 import { useUpcomingOccurrences } from '@/features/calendar/useReminders';
 import { TaskCheck } from '@/features/tasks/TaskBits';
 import { useFavoriteBookmarks, useOpenTasksDueBy, usePreferences, useRecent, useTaskCounts } from '@/hooks/useData';
-import { useNow, useSyncState } from '@/hooks/useUtils';
-import { deriveStatus } from '@/lib/sync/syncStore';
+import { useNow } from '@/hooks/useUtils';
+import { isIndexBuilding } from '@/lib/firestore/liveQuery';
 import type { CollectionName } from '@/types/models';
 import { describeDue, formatDateStr, formatRelative, todayStr } from '@/utils/dates';
-import { formatBytes, markdownPreview } from '@/utils/format';
+import { markdownPreview } from '@/utils/format';
 import { hostnameOf, safeHref } from '@/utils/url';
 import { cn } from '@/utils/cn';
 
@@ -141,6 +140,17 @@ function WidgetLink({ to, label }: { to: string; label: string }) {
   );
 }
 
+function WidgetError({ error, what }: { error: { code?: string }; what: string }) {
+  if (isIndexBuilding(error)) {
+    return (
+      <p role="status" className="px-2 text-sm text-slate-500 dark:text-slate-400">
+        Preparing {what}: Firestore is still building a search index (usually a few minutes after deploying indexes). This retries automatically.
+      </p>
+    );
+  }
+  return <p className="px-2 text-sm text-rose-600">Could not load {what}.</p>;
+}
+
 function TodayTasks() {
   const today = todayStr();
   const { data, loading, error } = useOpenTasksDueBy(today);
@@ -151,7 +161,7 @@ function TodayTasks() {
         {loading ? (
           <ListSkeleton rows={3} />
         ) : error ? (
-          <p className="px-2 text-sm text-rose-600">Could not load tasks.</p>
+          <WidgetError error={error} what="tasks" />
         ) : !data?.length ? (
           <EmptyState icon={<CheckCircle2 className="h-5 w-5" />} title="Nothing due today" description="Tasks due today or overdue appear here." className="py-6" />
         ) : (
@@ -254,13 +264,15 @@ function RecentNotes() {
 }
 
 function PinnedBookmarks() {
-  const { data, loading } = useFavoriteBookmarks(8);
+  const { data, loading, error } = useFavoriteBookmarks(8);
   return (
     <Card>
       <CardHeader title="Pinned bookmarks" icon={<Star className="h-4 w-4" />} action={<WidgetLink to="/bookmarks" label="All bookmarks" />} />
       <div className="px-3 pb-4">
         {loading ? (
           <ListSkeleton rows={3} />
+        ) : error && !data ? (
+          <WidgetError error={error} what="bookmarks" />
         ) : !data?.length ? (
           <EmptyState icon={<BookmarkIcon className="h-5 w-5" />} title="No favourites" description="Star a bookmark to pin it here." className="py-6" />
         ) : (
@@ -349,43 +361,11 @@ function RecentlyModified() {
 }
 
 function SyncCard() {
-  const state = useSyncState();
-  const status = deriveStatus(state);
-  const storage = useQuery({
-    queryKey: ['storage-estimate'],
-    queryFn: async () => (navigator.storage?.estimate ? await navigator.storage.estimate() : null),
-    staleTime: 60_000,
-  });
-  const usage = storage.data?.usage;
-  const quota = storage.data?.quota;
-  const pct = usage != null && quota ? Math.min(100, (usage / quota) * 100) : null;
-
   return (
     <Card>
-      <CardHeader title="Sync & storage" icon={<HardDrive className="h-4 w-4" />} action={<SyncIndicator />} />
-      <div className="space-y-4 px-5 pb-5 text-sm">
-        <p className="text-slate-600 dark:text-slate-400">{SYNC_COPY[status].detail}</p>
-        <dl className="grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <dt className="text-slate-500">Last synced</dt>
-            <dd className="mt-0.5 font-medium">{state.lastSyncedAt ? formatRelative(new Date(state.lastSyncedAt)) : '—'}</dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <dt className="text-slate-500">Uploads in progress</dt>
-            <dd className="mt-0.5 font-medium">{state.inFlightWrites}</dd>
-          </div>
-        </dl>
-        <div>
-          <div className="mb-1.5 flex justify-between text-xs text-slate-500">
-            <span>Offline storage on this device</span>
-            <span>
-              {formatBytes(usage)} {quota ? `of ${formatBytes(quota)}` : ''}
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" role="progressbar" aria-valuenow={pct ?? 0} aria-valuemin={0} aria-valuemax={100} aria-label="Device storage used">
-            <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(pct ?? 0, 1)}%` }} />
-          </div>
-        </div>
+      <CardHeader title="Sync & storage" icon={<Cloud className="h-4 w-4" />} action={<SyncIndicator />} />
+      <div className="px-5 pb-5">
+        <SyncDetails />
       </div>
     </Card>
   );

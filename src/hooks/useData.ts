@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/features/auth/session';
-import { useLiveCollection, useLiveDoc, type LiveState } from '@/lib/firestore/liveQuery';
+import { INDEX_RETRY_DELAYS_MS, isIndexBuilding, useLiveCollection, useLiveDoc, type LiveState } from '@/lib/firestore/liveQuery';
 import { mapSnapshot } from '@/repositories/mappers';
 import { docRef, preferencesRef } from '@/repositories/paths';
 import { DEFAULT_PREFERENCES, mapPreferences, savePreferences } from '@/repositories/preferences';
@@ -63,7 +63,8 @@ export function useTaskCounts(today: string) {
     queryKey: ['task-counts', uid, today],
     queryFn: () => fetchTaskCounts(db, uid, today),
     staleTime: 5 * 60_000,
-    retry: false,
+    retry: (failures, error) => isIndexBuilding(error as { code?: string }) && failures < INDEX_RETRY_DELAYS_MS.length,
+    retryDelay: (attempt) => INDEX_RETRY_DELAYS_MS[Math.min(attempt, INDEX_RETRY_DELAYS_MS.length - 1)]!,
     networkMode: 'online',
   });
 }

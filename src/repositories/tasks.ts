@@ -49,7 +49,7 @@ export function setTaskStatus(db: Firestore, uid: string, task: Task, status: Ta
     { merge: true },
   );
   batch.set(docRef(db, uid, 'tasks', nextId), buildCreateData('tasks', nextId, next));
-  return { id: task.id, done: trackWrite(batch.commit()) };
+  return { id: task.id, done: trackWrite(() => batch.commit()) };
 }
 
 export function toggleSubtask(db: Firestore, uid: string, task: Task, subtaskId: string): WriteResult {

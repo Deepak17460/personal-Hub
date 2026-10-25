@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, HardDrive, KeyRound, LayoutDashboard, LogOut, Monitor, Moon, Palette, Smartphone, Sun, User, Wifi } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Bell, KeyRound, LayoutDashboard, LogOut, Monitor, Moon, Palette, Smartphone, Sun, User, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, PageHeader, Segmented } from '@/components/ui/Display';
 import { Field, Input, Select, Switch } from '@/components/ui/Form';
 import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
-import { SyncIndicator, SYNC_COPY } from '@/components/layout/SyncIndicator';
+import { SyncDetails, SyncIndicator } from '@/components/layout/SyncIndicator';
 import { authService } from '@/features/auth/authService';
 import { useSession } from '@/features/auth/session';
 import { signOutEverywhereLocal } from '@/features/auth/signOut';
@@ -14,10 +14,7 @@ import { usePreferences } from '@/hooks/useData';
 import { useTheme } from '@/hooks/useTheme';
 import { useInstallPrompt, useSyncState } from '@/hooks/useUtils';
 import { friendlyAuthError } from '@/lib/firebase/errors';
-import { deriveStatus } from '@/lib/sync/syncStore';
 import type { DashboardWidget, ThemePreference } from '@/types/models';
-import { formatRelative } from '@/utils/dates';
-import { formatBytes } from '@/utils/format';
 import { BackupSection } from './BackupSection';
 
 const WIDGET_LABELS: Record<DashboardWidget, string> = {
@@ -32,19 +29,22 @@ const WIDGET_LABELS: Record<DashboardWidget, string> = {
 };
 
 export default function SettingsPage() {
+  const { online } = useSyncState();
   return (
     <div>
       <PageHeader title="Settings" description="Profile, appearance, data and security." />
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
+        <fieldset disabled={!online} className="min-w-0 space-y-6">
           <ProfileSection />
           <AppearanceSection />
           <NotificationSection />
           <DashboardSection />
-        </div>
+        </fieldset>
         <div className="space-y-6">
-          <BackupSection />
-          <SyncSection />
+          <fieldset disabled={!online} className="min-w-0 space-y-6">
+            <BackupSection />
+            <SyncSection />
+          </fieldset>
           <InstallSection />
           <SecuritySection />
         </div>
@@ -192,65 +192,19 @@ function DashboardSection() {
 }
 
 function SyncSection() {
-  const state = useSyncState();
-  const status = deriveStatus(state);
-  const toast = useToast();
-  const storage = useQuery({
-    queryKey: ['storage-estimate-settings'],
-    queryFn: async () => ({
-      estimate: navigator.storage?.estimate ? await navigator.storage.estimate() : null,
-      persisted: navigator.storage?.persisted ? await navigator.storage.persisted() : false,
-    }),
-  });
-
   return (
     <Card>
-      <CardHeader title="Sync & offline" icon={<Wifi className="h-4 w-4" />} action={<SyncIndicator />} />
+      <CardHeader title="Sync & storage" icon={<Wifi className="h-4 w-4" />} action={<SyncIndicator />} />
       <div className="space-y-4 px-5 pb-5 text-sm">
-        <p className="text-slate-600 dark:text-slate-400">{SYNC_COPY[status].detail}</p>
-        <dl className="grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <dt className="text-slate-500">Connection</dt>
-            <dd className="mt-0.5 font-medium">{state.online ? 'Online' : 'Offline'}</dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <dt className="text-slate-500">Last synced</dt>
-            <dd className="mt-0.5 font-medium">{state.lastSyncedAt ? formatRelative(new Date(state.lastSyncedAt)) : '—'}</dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <dt className="text-slate-500">Device storage used</dt>
-            <dd className="mt-0.5 font-medium">
-              {formatBytes(storage.data?.estimate?.usage)}
-              {storage.data?.estimate?.quota ? ` of ${formatBytes(storage.data.estimate.quota)}` : ''}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-            <dt className="text-slate-500">Persistent storage</dt>
-            <dd className="mt-0.5 font-medium">{storage.data?.persisted ? 'Granted' : 'Not granted'}</dd>
-          </div>
-        </dl>
-        {!storage.data?.persisted && navigator.storage?.persist && (
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<HardDrive className="h-3.5 w-3.5" />}
-            onClick={async () => {
-              const ok = await navigator.storage.persist();
-              void storage.refetch();
-              if (ok) toast.success('The browser will try to keep offline data on this device.');
-              else toast.info('The browser declined. Installing the app usually helps.');
-            }}
-          >
-            Ask browser to keep offline data
-          </Button>
-        )}
+        <SyncDetails />
         <div className="rounded-xl border border-slate-200 p-3 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-400">
-          <p className="font-medium text-slate-800 dark:text-slate-200">Offline mode</p>
+          <p className="font-medium text-slate-800 dark:text-slate-200">Where your data lives</p>
           <ul className="mt-1 list-disc space-y-1 pl-4">
-            <li>After the first load, the app opens without a connection, showing data saved on this device.</li>
-            <li>Changes made offline are queued on this device and upload automatically when you reconnect.</li>
+            <li>All notes, tasks, bookmarks, events, documents and settings are stored only in Cloud Firestore.</li>
+            <li>This device keeps a temporary copy in memory while the app is open; nothing is saved to the device’s disk.</li>
+            <li>Offline, the app still opens but editing is paused, because changes could not be saved safely.</li>
             <li>If the same note is edited on two devices, you will be asked which version to keep — nothing is silently overwritten. Other items use the most recent change.</li>
-            <li>The offline copy is a cache, not a backup: clearing browser data removes it. Export regularly.</li>
+            <li>Firestore is not a backup of itself: export regularly.</li>
           </ul>
         </div>
       </div>
@@ -338,7 +292,9 @@ function SecuritySection() {
             Sign out & remove data from this device
           </Button>
         </div>
-        <p className="text-xs text-slate-500">Use “remove data” on shared or borrowed devices. Your cloud data is not affected.</p>
+        <p className="text-xs text-slate-500">
+          Use “remove data” on shared or borrowed devices: it also clears any copy left by older versions of the app. Your Firestore data is not affected.
+        </p>
       </div>
     </Card>
   );

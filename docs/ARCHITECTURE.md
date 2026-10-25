@@ -10,7 +10,7 @@ Browser (PWA)                                    Google Firebase (Spark)
 │   │                                  │        │  users/{uid}/...            │
 │ repositories/* (only Firestore code) │        │  Security Rules = the       │
 │   │                                  │        │  owner allowlist + schema   │
-│ Firestore SDK + IndexedDB cache      │        └─────────────────────────────┘
+│ Firestore SDK (memory-only cache)    │        └─────────────────────────────┘
 │ Service worker (static assets only)  │
 └──────────────────────────────────────┘
           ▲  static files (HTML/JS/CSS/icons) from Cloudflare Pages
@@ -40,18 +40,37 @@ The contract for a record is kept in sync across `src/types/models.ts`, `src/sch
 ## Reads: live queries
 
 `useLiveCollection` / `useLiveDoc` share one Firestore listener per query key across components
-(released 20 s after the last subscriber leaves). Snapshots come first from the local cache and
-then from the server; their `hasPendingWrites` flag feeds the sync indicator.
+(released 20 s after the last subscriber leaves). Firestore is the only persistent store for
+records: the SDK uses `memoryLocalCache()`, so documents are held in memory only while the tab is
+open and nothing is written to IndexedDB. Snapshot `fromCache` / `hasPendingWrites` metadata feeds
+the connection status ("Connecting…", "Synced", pending writes). If a query's composite index is
+still building, the listener retries automatically.
+
+Exports, imports and search read with `getDocsFromServer`, so they never return stale or partial
+data from memory, and they refuse to run offline.
 
 Lists are paged (100 at a time). Dashboard widgets and calendars use narrow indexed queries
 (date ranges, status, favourites). Task counts use server-side aggregation (`count()`).
 
 ## Writes: fire-and-forget with tracking
 
-The UI never waits for the server: a write is applied to the local cache immediately and the
-promise is passed to `trackWrite`, which counts in-flight writes and reports errors as toasts.
-Offline, writes are queued in IndexedDB by the Firestore SDK and uploaded on reconnect, even
-after a reload.
+Every write goes through `trackWrite(() => write())`. Online, the write is applied to the
+in-memory cache immediately, and `trackWrite` counts it until Firestore acknowledges it and
+reports errors as toasts. While a write is unacknowledged, closing the tab triggers the browser's
+"leave site?" warning. Offline, `trackWrite` refuses to start the write (`OfflineWriteError`), so
+nothing is queued in a place that would be lost on reload.
+
+### Legacy offline cache (one-time handover)
+
+Older versions used `persistentLocalCache` (IndexedDB `firestore/[DEFAULT]/<projectId>/main`). At
+start-up, `chooseFirestoreCacheMode()` checks `indexedDB.databases()`. If that database exists,
+the app opens it once more so that any writes queued there can upload. It then waits for
+`waitForPendingWrites()` (Firestore's acknowledgement), and only after that runs `terminate` and
+`clearIndexedDbPersistence`, removes Firestore's `firestore_*` multi-tab keys from
+`localStorage`, and reloads in memory-only mode. If another tab still holds the database, the
+deletion is retried on the next start. On browsers without `indexedDB.databases()` (Firefox
+before 126), the old database is not detected and is left untouched rather than deleted blindly;
+"Sign out & remove data" or clearing site data removes it.
 
 ## Search
 
@@ -77,15 +96,16 @@ each collection and filters the remaining terms on the client, so "pass pack" fi
 
 | Situation | Behaviour |
 | --- | --- |
-| First visit | Needs a connection (sign-in, initial data). |
-| Later visits offline | Service worker serves the app shell; data comes from IndexedDB; sign-in state is kept in IndexedDB. |
-| Edits offline | Saved locally, shown as "Saved on this device · waiting to sync"; uploaded automatically later. |
-| Search offline | Works on locally cached data. |
-| Not-yet-cached data | Not available until online (e.g. a page of notes never opened). |
-| Clearing site data / "remove data" sign-out | Local cache and queued writes are deleted. |
+| Opening the app offline | Service worker serves the app shell; the sign-in session is kept (IndexedDB), but the workspace shows "can't reach Firestore" and retries when the connection returns. |
+| Going offline while open | An "offline" banner appears; data already loaded in this tab stays visible; all forms and edit buttons are disabled and any write is refused with a clear message. |
+| Note being typed when the connection drops | The draft stays in the editor, labelled "Offline · not saved yet"; it saves automatically on reconnect (leaving the page shows a warning). |
+| Search / export / import offline | Refused with a message; they need Firestore. |
+| Settings offline | Data settings are disabled; sign-out and install remain available. |
+| "Sign out & remove data" | Shuts Firestore down and deletes any legacy on-device cache. |
 
-The service worker precaches only static build output and never caches API responses, so
-private data is only in the Firestore IndexedDB cache.
+The service worker precaches only static build output (the app shell, JS, CSS, icons and
+manifest) and has no runtime caching, so it never stores Firestore or Auth responses or any
+private data.
 
 ## Reminders
 

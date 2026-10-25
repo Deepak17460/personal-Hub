@@ -67,9 +67,9 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        // Only same-origin static build assets are precached. Firestore/Auth traffic
-        // is cross-origin and never cached by the service worker; private data lives
-        // only in Firestore's own IndexedDB cache for this origin.
+        // App shell only: same-origin static build assets are precached. No runtime caching,
+        // so Firestore/Auth responses (cross-origin) and private data are never stored by the
+        // service worker. Record data lives only in Firestore and in memory while the app is open.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/__\//],

@@ -1,8 +1,7 @@
 import {
   Timestamp,
   documentId,
-  getDocs,
-  getDocsFromCache,
+  getDocsFromServer,
   limit,
   orderBy,
   query,
@@ -17,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { BACKUP_FORMAT, BACKUP_VERSION, type BackupFile, type ExportedRecord } from '@/schemas/backup';
 import type { ImportPlan } from '@/features/backup/importPlanner';
-import { trackWrite } from '@/lib/sync/syncStore';
+import { requireConnection, trackWrite } from '@/lib/sync/syncStore';
 import { COLLECTIONS, type CollectionName, type Note, type Preferences, type RecordOf, type Task } from '@/types/models';
 import { randomId } from '@/utils/ids';
 import { mapSnapshot, tokensFor } from './mappers';
@@ -27,20 +26,19 @@ import { buildCreateData, pickFields, validateFields, type SimpleCollection } fr
 
 const PAGE = 500;
 
-/** Reads a whole collection in pages of 500 (used only for export/import, never on normal screens). */
-export async function fetchAll<C extends CollectionName>(
-  db: Firestore,
-  uid: string,
-  c: C,
-  opts: { fromCache?: boolean } = {},
-): Promise<RecordOf<C>[]> {
+/**
+ * Reads a whole collection from the Firestore server in pages of 500 (export/import only, never
+ * on normal screens). Fails when offline instead of returning a partial in-memory copy.
+ */
+export async function fetchAll<C extends CollectionName>(db: Firestore, uid: string, c: C): Promise<RecordOf<C>[]> {
+  requireConnection();
   const out: RecordOf<C>[] = [];
   let cursor: QueryDocumentSnapshot | null = null;
   for (;;) {
     const q: Query = cursor
       ? query(colRef(db, uid, c), orderBy(documentId()), startAfter(cursor), limit(PAGE))
       : query(colRef(db, uid, c), orderBy(documentId()), limit(PAGE));
-    const snap: QuerySnapshot = opts.fromCache ? await getDocsFromCache(q) : await getDocs(q);
+    const snap: QuerySnapshot = await getDocsFromServer(q);
     snap.docs.forEach((d) => out.push(mapSnapshot(c, d)));
     if (snap.docs.length < PAGE) break;
     cursor = snap.docs[snap.docs.length - 1] ?? null;
@@ -84,8 +82,8 @@ export function buildBackup(data: { [C in CollectionName]: RecordOf<C>[] }, pref
   };
 }
 
-export async function exportAll(db: Firestore, uid: string, preferences: Preferences | undefined, appVersion: string, fromCache = false): Promise<BackupFile> {
-  const [notes, tasks, bookmarks, documents, events] = await Promise.all(COLLECTIONS.map((c) => fetchAll(db, uid, c, { fromCache })));
+export async function exportAll(db: Firestore, uid: string, preferences: Preferences | undefined, appVersion: string): Promise<BackupFile> {
+  const [notes, tasks, bookmarks, documents, events] = await Promise.all(COLLECTIONS.map((c) => fetchAll(db, uid, c)));
   return buildBackup(
     { notes, tasks, bookmarks, documents, events } as { [C in CollectionName]: RecordOf<C>[] },
     preferences,
@@ -151,14 +149,14 @@ export async function applyImport(
       if (op.kind === 'create') batch.set(ref, data);
       else batch.set(ref, data, { merge: true });
     }
-    await trackWrite(batch.commit());
+    await trackWrite(() => batch.commit());
     done = Math.min(plan.ops.length, i + CHUNK);
     onProgress?.(done, plan.ops.length);
   }
   if (preferences) {
     const batch = writeBatch(db);
     batch.set(preferencesRef(db, uid), { ...preferences, updatedAt: serverTimestamp() });
-    await trackWrite(batch.commit());
+    await trackWrite(() => batch.commit());
   }
   return done;
 }

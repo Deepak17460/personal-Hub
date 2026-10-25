@@ -5,9 +5,12 @@ import { useSession } from '@/features/auth/session';
 import { useReminderEngine } from '@/features/calendar/useReminders';
 import { usePreferences } from '@/hooks/useData';
 import { themeStore, useTheme } from '@/hooks/useTheme';
+import { useSyncState } from '@/hooks/useUtils';
+import { isOnline } from '@/lib/sync/syncStore';
 import { cn } from '@/utils/cn';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { IconButton } from '../ui/Button';
+import { LegacyCacheMigration, OfflineBanner } from './ConnectionBanner';
 import { PageLoader } from './FullScreenLoader';
 import { NAV_ITEMS } from './nav';
 import { SyncIndicator } from './SyncIndicator';
@@ -110,7 +113,8 @@ function ThemeToggle() {
       onClick={() => {
         const next = isDark ? 'light' : 'dark';
         setTheme(next);
-        update({ theme: next });
+        // Offline the theme still switches on this device; it is saved to Firestore only when online.
+        if (isOnline()) update({ theme: next });
       }}
     >
       {isDark ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
@@ -164,6 +168,7 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { online } = useSyncState();
 
   useEffect(() => setDrawerOpen(false), [location.pathname]);
 
@@ -217,12 +222,18 @@ export function AppLayout() {
         </div>
       </header>
 
+      <LegacyCacheMigration />
+      <OfflineBanner />
+
       <main id="main" className="mx-auto w-full max-w-7xl px-4 pt-6 pb-28 sm:px-6 lg:pb-10">
-        <ErrorBoundary resetKey={location.pathname}>
-          <Suspense fallback={<PageLoader />}>
-            <Outlet />
-          </Suspense>
-        </ErrorBoundary>
+        {/* Disables every form control while offline; links keep working. Settings disables its own data sections so sign-out stays available. */}
+        <fieldset disabled={!online && !location.pathname.startsWith('/settings')} className="contents">
+          <ErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
+        </fieldset>
       </main>
 
       <MobileNav onMore={() => setDrawerOpen(true)} />

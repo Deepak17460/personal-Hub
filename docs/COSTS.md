@@ -29,8 +29,10 @@ Pricing: <https://firebase.google.com/pricing>
 | Firebase Hosting transfer | 360 MB / day | Small: the service worker serves the app shell after the first load |
 
 What happens at a limit: on Spark, Firestore **stops serving** requests over the daily quota until
-the quota resets — it does not bill you, because there is no billing account. The app keeps
-working offline from the local cache and syncs after the reset.
+the quota resets — it does not bill you, because there is no billing account. The app shows
+that Firestore cannot be reached and pauses editing until the quota resets; no data is lost.
+Without offline persistence, every app start reads its lists from Firestore again; for one person
+this is still far below the 50 K reads/day limit.
 
 Things that would require billing (avoid them):
 

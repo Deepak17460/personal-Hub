@@ -7,8 +7,10 @@ needs a paid server.
 
 - **Access control lives in Firestore Security Rules**: only the Firebase Auth UID(s) listed in
   `firebase/firestore.rules` can read or write anything. Signing up does not grant access.
-- **Offline first**: data is cached in IndexedDB, edits made offline are queued and uploaded on
-  reconnect, and the app shell is served by a service worker.
+- **Firestore is the only persistent store** for notes, tasks, bookmarks, events, document
+  metadata and settings. The Firestore SDK runs with a memory-only cache (no IndexedDB
+  persistence). Offline, the app shows a clear banner and pauses editing. The installable PWA's
+  service worker caches only the app shell and static assets.
 - **No file storage**: "Documents" stores metadata and an external link (Drive, OneDrive, …).
   Firebase Cloud Storage is never enabled.
 
@@ -94,12 +96,13 @@ Verified locally (emulators + production build in Chrome):
   `personal-hub-ea5ea.firebaseapp.com/__/auth/handler` with no CSP errors (sign-in not completed).
 - Note autosave; Markdown rendering strips `<script>`/event handlers, neutralises `javascript:` links
   and shows remote images as links; production CSP with no violations.
-- Offline edit → "waiting to sync" → offline reload (service worker + IndexedDB) → reconnect uploads.
+- (Earlier offline-first version; superseded by Firestore-only storage, which is unit and
+  emulator tested but not yet re-tested in a browser.)
 - Two-device conflict on the same note → "Keep mine / Use other version / Keep both".
 - Recurring task completion creates the next instance; unsafe bookmark URLs rejected (UI and rules).
 - Global multi-word prefix search; backup export contains data but no tokens or secrets.
 - Phone (390 px) layout on every page without horizontal overflow; PWA update prompt.
-- "Sign out & remove data" deletes the Firestore IndexedDB cache.
+- "Sign out & remove data" deletes any legacy Firestore IndexedDB cache.
 
 **Not verified** (needs your accounts): completing a real Google sign-in, rules deployed with your
 UID, Firebase Hosting deploy and its live headers, mobile sign-in, Route 53 DNS, HTTPS on your domain, and installation on a physical phone.

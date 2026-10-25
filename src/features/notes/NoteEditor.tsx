@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/ui/Confirm';
 import { useToast } from '@/components/ui/Toast';
 import { useSession } from '@/features/auth/session';
 import { useNote } from '@/hooks/useData';
+import { useSyncState } from '@/hooks/useUtils';
 import { createNote } from '@/repositories/notes';
 import { deleteRecord } from '@/repositories/records';
 import { LIMITS } from '@/schemas/common';
@@ -25,6 +26,7 @@ export function NoteEditor({ noteId, categories }: { noteId: string; categories:
   const { data: note, loading } = useNote(noteId);
   const { draft, saveState, conflict, update, resolve } = useNoteEditor(db, uid, note);
   const [preview, setPreview] = useState(false);
+  const { online } = useSyncState();
 
   if (loading || (note && !draft)) {
     return (
@@ -73,9 +75,11 @@ export function NoteEditor({ noteId, categories }: { noteId: string; categories:
     saveState === 'conflict'
       ? 'Conflict'
       : saveState === 'unsaved'
-        ? 'Editing…'
+        ? online
+          ? 'Editing…'
+          : 'Offline · not saved yet (saves when you reconnect; keep this tab open)'
         : note.pending
-          ? 'Saved on this device · waiting to sync'
+          ? 'Saving to Firestore…'
           : `Saved · ${formatRelative(note.updatedAt)}`;
 
   return (
@@ -84,7 +88,11 @@ export function NoteEditor({ noteId, categories }: { noteId: string; categories:
         <IconButton label="Back to notes" className="lg:hidden" onClick={() => navigate('/notes')}>
           <ArrowLeft className="h-4.5 w-4.5" />
         </IconButton>
-        <span className={cn('ml-1 truncate text-xs', note.pending ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500')} role="status" aria-live="polite">
+        <span
+          className={cn('ml-1 truncate text-xs', note.pending || (saveState === 'unsaved' && !online) ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500')}
+          role="status"
+          aria-live="polite"
+        >
           {status}
         </span>
         <div className="ml-auto flex items-center gap-0.5">

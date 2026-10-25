@@ -5,6 +5,7 @@ import { Card, EmptyState, ListSkeleton, PageHeader } from '@/components/ui/Disp
 import { Input } from '@/components/ui/Form';
 import { useSearch } from '@/hooks/useData';
 import { useSyncState } from '@/hooks/useUtils';
+import { friendlyDataError } from '@/lib/firebase/errors';
 import { COLLECTIONS, type CollectionName } from '@/types/models';
 import { formatDateStr } from '@/utils/dates';
 import { markdownPreview } from '@/utils/format';
@@ -49,7 +50,7 @@ export default function SearchPage() {
       </div>
       {!online && (
         <p className="mb-4 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
-          <WifiOff className="h-3.5 w-3.5" aria-hidden /> Offline: searching only data already saved on this device.
+          <WifiOff className="h-3.5 w-3.5" aria-hidden /> Offline: search needs a connection because your data is stored only in Firestore.
         </p>
       )}
 
@@ -63,7 +64,7 @@ export default function SearchPage() {
         </Card>
       ) : search.isError ? (
         <Card>
-          <EmptyState icon={<SearchIcon className="h-5 w-5" />} title="Search failed" description="Check your connection and try again." />
+          <EmptyState icon={<SearchIcon className="h-5 w-5" />} title="Search failed" description={friendlyDataError(search.error)} />
         </Card>
       ) : total === 0 ? (
         <Card>
