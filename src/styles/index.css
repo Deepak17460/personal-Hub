@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-slide-up: slide-up 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-slate-50 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  /* Grid items default to min-width:auto, so long truncated text would widen the column past the screen. */
+  .grid > * {
+    min-width: 0;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-indigo-500;
+  }
+  ::selection {
+    @apply bg-indigo-200 dark:bg-indigo-500/40;
+  }
+  dialog::backdrop {
+    background: rgb(15 23 42 / 0.55);
+    backdrop-filter: blur(2px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none;
+  }
+  .input-base {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors
+      focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none
+      disabled:cursor-not-allowed disabled:opacity-60
+      aria-invalid:border-rose-500 aria-invalid:ring-rose-500/20
+      dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+
+  /* Markdown rendering (react-markdown output; raw HTML is never rendered). */
+  .prose-hub {
+    @apply text-[0.95rem] leading-7 text-slate-800 dark:text-slate-200;
+    overflow-wrap: anywhere;
+  }
+  .prose-hub h1 { @apply mt-6 mb-3 text-2xl font-semibold; }
+  .prose-hub h2 { @apply mt-6 mb-2 text-xl font-semibold; }
+  .prose-hub h3 { @apply mt-5 mb-2 text-lg font-semibold; }
+  .prose-hub p { @apply my-3; }
+  .prose-hub ul { @apply my-3 list-disc pl-6; }
+  .prose-hub ol { @apply my-3 list-decimal pl-6; }
+  .prose-hub li { @apply my-1; }
+  .prose-hub a { @apply text-indigo-600 underline underline-offset-2 dark:text-indigo-400; }
+  .prose-hub blockquote { @apply my-4 border-l-4 border-slate-300 pl-4 text-slate-600 italic dark:border-slate-700 dark:text-slate-400; }
+  .prose-hub code { @apply rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.85em] dark:bg-slate-800; }
+  .prose-hub pre { @apply my-4 overflow-x-auto rounded-xl bg-slate-900 p-4 text-slate-100; }
+  .prose-hub pre code { @apply bg-transparent p-0 text-inherit; }
+  .prose-hub table { @apply my-4 block w-full overflow-x-auto text-sm; }
+  .prose-hub th, .prose-hub td { @apply border border-slate-200 px-3 py-1.5 text-left dark:border-slate-700; }
+  .prose-hub hr { @apply my-6 border-slate-200 dark:border-slate-800; }
+  .prose-hub input[type='checkbox'] { @apply mr-2 align-middle; }
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

@@ -1,0 +1,178 @@
+rules_version = '2';
+
+// Personal Hub — Firestore Security Rules
+// Everything is denied unless a rule below explicitly allows it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------------------------
+    // Owner allowlist (Firebase Auth UIDs). Set with:  npm run owner:set -- <YOUR_UID>
+    // While the placeholder is present nobody can read or write any data.
+    // ---------------------------------------------------------------------------------
+    function ownerUids() {
+      return ['__OWNER_UID__'];
+    }
+
+    function isOwner(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.uid in ownerUids();
+    }
+
+    // ---------- Generic validators ----------
+    function isStr(v, max) { return v is string && v.size() <= max; }
+    function isReqStr(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+    function isTags(v) { return v is list && v.size() <= 20; }
+    function isTokens(v) { return v is list && v.size() <= 400; }
+    function isDateStr(v) { return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    function isTimeStr(v) { return v is string && v.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'); }
+    function isHttpUrl(v) { return v is string && v.size() <= 2048 && v.matches('^https?://[^\\s]+$'); }
+    function isRecurrence(v) {
+      return v is map
+        && v.keys().hasOnly(['freq', 'interval'])
+        && v.keys().hasAll(['freq', 'interval'])
+        && v.freq in ['none', 'daily', 'weekly', 'monthly', 'yearly']
+        && v.interval is int && v.interval >= 1 && v.interval <= 365;
+    }
+
+    function hasExactly(keys) {
+      return request.resource.data.keys().hasOnly(keys) && request.resource.data.keys().hasAll(keys);
+    }
+
+    // Shared metadata: id matches the document ID, timestamps are server-controlled on update.
+    function validMeta(id) {
+      let d = request.resource.data;
+      return d.id == id
+        && d.schemaVersion is int && d.schemaVersion >= 1
+        && isTokens(d.searchTokens);
+    }
+    function validCreateTimes() {
+      let d = request.resource.data;
+      // Imports may preserve original timestamps; nothing may be dated in the future.
+      return d.createdAt is timestamp && d.createdAt <= request.time + duration.value(1, 'h')
+        && d.updatedAt is timestamp && d.updatedAt <= request.time + duration.value(1, 'h');
+    }
+    function validUpdateTimes() {
+      return request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.id == resource.data.id;
+    }
+
+    // ---------- Entity validators ----------
+    function validNote(id) {
+      let d = request.resource.data;
+      return hasExactly(['id', 'schemaVersion', 'createdAt', 'updatedAt', 'searchTokens',
+                         'title', 'content', 'category', 'tags', 'pinned', 'archived', 'revId', 'prevRevId'])
+        && validMeta(id)
+        && isStr(d.title, 200) && isStr(d.content, 100000) && isStr(d.category, 60) && isTags(d.tags)
+        && d.pinned is bool && d.archived is bool
+        && isReqStr(d.revId, 64)
+        && (d.prevRevId == null || isStr(d.prevRevId, 64));
+    }
+
+    function validTask(id) {
+      let d = request.resource.data;
+      return hasExactly(['id', 'schemaVersion', 'createdAt', 'updatedAt', 'searchTokens',
+                         'title', 'description', 'priority', 'status', 'dueDate', 'category', 'tags',
+                         'subtasks', 'recurrence', 'completedAt'])
+        && validMeta(id)
+        && isReqStr(d.title, 200) && isStr(d.description, 5000)
+        && d.priority in ['low', 'medium', 'high', 'critical']
+        && d.status in ['todo', 'in_progress', 'done']
+        && (d.dueDate == null || isDateStr(d.dueDate))
+        && isStr(d.category, 60) && isTags(d.tags)
+        && d.subtasks is list && d.subtasks.size() <= 50
+        && isRecurrence(d.recurrence)
+        && (d.completedAt == null || d.completedAt is timestamp);
+    }
+
+    function validBookmark(id) {
+      let d = request.resource.data;
+      return hasExactly(['id', 'schemaVersion', 'createdAt', 'updatedAt', 'searchTokens',
+                         'url', 'title', 'description', 'category', 'tags', 'favorite'])
+        && validMeta(id)
+        && isHttpUrl(d.url)
+        && isReqStr(d.title, 200) && isStr(d.description, 5000) && isStr(d.category, 60) && isTags(d.tags)
+        && d.favorite is bool;
+    }
+
+    function validDocument(id) {
+      let d = request.resource.data;
+      return hasExactly(['id', 'schemaVersion', 'createdAt', 'updatedAt', 'searchTokens',
+                         'title', 'description', 'category', 'tags', 'externalUrl', 'storageProvider',
+                         'fileType', 'fileSizeBytes'])
+        && validMeta(id)
+        && isReqStr(d.title, 200) && isStr(d.description, 5000) && isStr(d.category, 60) && isTags(d.tags)
+        && (d.externalUrl == null || isHttpUrl(d.externalUrl))
+        && isStr(d.storageProvider, 60) && isStr(d.fileType, 60)
+        && (d.fileSizeBytes == null || (d.fileSizeBytes is int && d.fileSizeBytes >= 0));
+    }
+
+    function validEvent(id) {
+      let d = request.resource.data;
+      return hasExactly(['id', 'schemaVersion', 'createdAt', 'updatedAt', 'searchTokens',
+                         'title', 'description', 'date', 'time', 'kind', 'recurrence', 'reminderMinutes'])
+        && validMeta(id)
+        && isReqStr(d.title, 200) && isStr(d.description, 5000)
+        && isDateStr(d.date)
+        && (d.time == null || isTimeStr(d.time))
+        && d.kind in ['event', 'important', 'reminder']
+        && isRecurrence(d.recurrence)
+        && (d.reminderMinutes == null || (d.reminderMinutes is int && d.reminderMinutes >= 0 && d.reminderMinutes <= 43200));
+    }
+
+    function validPreferences() {
+      let d = request.resource.data;
+      return hasExactly(['theme', 'notificationsEnabled', 'weekStartsOn', 'dashboardWidgets', 'schemaVersion', 'updatedAt'])
+        && d.theme in ['light', 'dark', 'system']
+        && d.notificationsEnabled is bool
+        && d.weekStartsOn in [0, 1]
+        && d.dashboardWidgets is map && d.dashboardWidgets.size() <= 20
+        && d.schemaVersion is int
+        && d.updatedAt == request.time;
+    }
+
+    // ---------- Owner-scoped data ----------
+    match /users/{uid} {
+      // No profile document is stored; only the subcollections below are used.
+
+      match /settings/{settingId} {
+        allow read: if isOwner(uid) && settingId == 'preferences';
+        allow create, update: if isOwner(uid) && settingId == 'preferences' && validPreferences();
+      }
+
+      match /notes/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validNote(id) && validCreateTimes();
+        // Optimistic concurrency: an edit must be based on the currently stored revision.
+        allow update: if isOwner(uid) && validNote(id) && validUpdateTimes()
+          && request.resource.data.prevRevId == resource.data.revId
+          && request.resource.data.revId != resource.data.revId;
+      }
+
+      match /tasks/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validTask(id) && validCreateTimes();
+        allow update: if isOwner(uid) && validTask(id) && validUpdateTimes();
+      }
+
+      match /bookmarks/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validBookmark(id) && validCreateTimes();
+        allow update: if isOwner(uid) && validBookmark(id) && validUpdateTimes();
+      }
+
+      match /documents/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validDocument(id) && validCreateTimes();
+        allow update: if isOwner(uid) && validDocument(id) && validUpdateTimes();
+      }
+
+      match /events/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validEvent(id) && validCreateTimes();
+        allow update: if isOwner(uid) && validEvent(id) && validUpdateTimes();
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "dueDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookmarks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "favorite", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "notes", "fieldPath": "content", "indexes": [] },
+    { "collectionGroup": "tasks", "fieldPath": "description", "indexes": [] },
+    { "collectionGroup": "tasks", "fieldPath": "subtasks", "indexes": [] },
+    { "collectionGroup": "bookmarks", "fieldPath": "description", "indexes": [] },
+    { "collectionGroup": "documents", "fieldPath": "description", "indexes": [] },
+    { "collectionGroup": "events", "fieldPath": "description", "indexes": [] }
+  ]
+}
