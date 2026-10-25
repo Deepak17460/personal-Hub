@@ -288,12 +288,11 @@ function InstallSection() {
 
 function SecuritySection() {
   const { user } = useSession();
-  const toast = useToast();
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const state = useSyncState();
   const pending = state.inFlightWrites > 0 || state.snapshotPending;
-  const providers = user.providerData.map((p) => (p.providerId === 'password' ? 'Email & password' : p.providerId === 'google.com' ? 'Google' : p.providerId));
+  const providers = user.providerData.map((p) => (p.providerId === 'google.com' ? 'Google' : p.providerId));
 
   const signOut = async (clear: boolean) => {
     if (clear && pending) {
@@ -328,21 +327,9 @@ function SecuritySection() {
             <dd className="truncate text-right font-mono">{user.uid}</dd>
           </div>
         </dl>
-        {user.email && user.providerData.some((p) => p.providerId === 'password') && (
-          <Button
-            variant="secondary"
-            onClick={async () => {
-              try {
-                await authService.resetPassword(user.email!);
-                toast.success('Password change link sent to your email.');
-              } catch (e) {
-                toast.error(friendlyAuthError(e));
-              }
-            }}
-          >
-            Send password change email
-          </Button>
-        )}
+        <p className="text-xs text-slate-500">
+          You sign in with Google. Protect your Google account with 2-Step Verification; manage it at myaccount.google.com.
+        </p>
         <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row dark:border-slate-800">
           <Button variant="secondary" icon={<LogOut className="h-4 w-4" />} onClick={() => void signOut(false)}>
             Sign out

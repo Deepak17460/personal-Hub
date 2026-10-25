@@ -19,7 +19,5 @@ export const isFirebaseConfigured = Boolean(
 );
 
 export const featureFlags = {
-  allowSignup: env.VITE_ALLOW_SIGNUP === 'true',
-  googleSignIn: env.VITE_ENABLE_GOOGLE_SIGNIN === 'true',
   useEmulators: env.VITE_USE_EMULATORS === 'true',
 };

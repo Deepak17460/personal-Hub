@@ -13,10 +13,12 @@ service cloud.firestore {
       return ['__OWNER_UID__'];
     }
 
+    // Only Google sign-in is accepted; any other provider is denied even for an allowlisted UID.
     function isOwner(uid) {
       return request.auth != null
         && request.auth.uid == uid
-        && request.auth.uid in ownerUids();
+        && request.auth.uid in ownerUids()
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
     // ---------- Generic validators ----------

@@ -33,12 +33,13 @@ npm run emulators          # terminal 1: Auth on :9099, Firestore on :8080 (demo
 npm run dev:emulators      # terminal 2: app on http://localhost:5173
 ```
 
-1. Open the app, choose **Create account** and sign up (any email; the Auth emulator is fake).
+1. Open the app and click **Continue with Google**. The Auth emulator opens a fake Google
+   account picker: **Add new account**, type any email, **Sign in with Google.com**.
 2. You will see **"This account is not authorised"** with your UID. That is the rules working.
 3. Run `npm run owner:set -- <that UID>`. The emulator reloads the rules automatically; refresh
    the page and the workspace opens.
 4. Before committing, put the placeholder back (`'__OWNER_UID__'` in `firebase/firestore.rules`)
-   or set your real production UID instead — see [deployment](docs/DEPLOYMENT.md#5-bootstrap-the-owner-account).
+   or set your real production UID instead — see [deployment](docs/DEPLOYMENT.md#4-get-your-uid-and-allowlist-it).
 
 Emulator data is in memory and disappears when the emulators stop.
 
@@ -84,8 +85,13 @@ tests/            unit/, components/, emulator/
 
 Verified locally (emulators + production build in Chrome):
 
-- Type-check, lint, 81 unit/component tests, 22 emulator tests (rules + repositories), production build.
-- Sign-up → "not authorised" screen → owner allowlist → workspace access; wrong-password error.
+- Type-check, lint, 89 unit/component tests, 23 emulator tests (rules + repositories), production build.
+- Google sign-in (Auth emulator popup) → "not authorised" screen with UID → owner allowlist →
+  workspace access; session survives reload; same data on a second browser context; a second
+  Google account is refused; sign-out.
+- Rules deny the owner UID when signed in with any provider other than Google.
+- Against the real project: the popup reaches Google's sign-in page via
+  `personal-hub-ea5ea.firebaseapp.com/__/auth/handler` with no CSP errors (sign-in not completed).
 - Note autosave; Markdown rendering strips `<script>`/event handlers, neutralises `javascript:` links
   and shows remote images as links; production CSP with no violations.
 - Offline edit → "waiting to sync" → offline reload (service worker + IndexedDB) → reconnect uploads.
@@ -95,6 +101,6 @@ Verified locally (emulators + production build in Chrome):
 - Phone (390 px) layout on every page without horizontal overflow; PWA update prompt.
 - "Sign out & remove data" deletes the Firestore IndexedDB cache.
 
-**Not verified** (needs your accounts): a real Firebase project, Google sign-in, Cloudflare Pages
-build/deploy, Route 53 DNS, HTTPS on your domain, and installation on a physical phone.
-Follow the smoke test at the end of [DEPLOYMENT.md](docs/DEPLOYMENT.md#10-smoke-test-after-deploying).
+**Not verified** (needs your accounts): completing a real Google sign-in, rules deployed with your
+UID, Firebase Hosting deploy and its live headers, mobile sign-in, Route 53 DNS, HTTPS on your domain, and installation on a physical phone.
+Follow the smoke test at the end of [DEPLOYMENT.md](docs/DEPLOYMENT.md#9-smoke-test-after-deploying).

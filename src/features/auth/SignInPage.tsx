@@ -1,22 +1,15 @@
-import { useState, type ComponentPropsWithRef } from 'react';
-import { Link, Navigate, useLocation } from 'react-router';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router';
 import { Button } from '@/components/ui/Button';
-import { Field, Input } from '@/components/ui/Form';
 import { FullScreenLoader } from '@/components/layout/FullScreenLoader';
-import { featureFlags } from '@/lib/firebase/config';
 import { friendlyAuthError } from '@/lib/firebase/errors';
 import { authService } from './authService';
 import { useAuth } from './AuthProvider';
 import { AuthLayout } from './AuthLayout';
-import { signInSchema, signUpSchema, type SignInValues, type SignUpValues } from './authSchemas';
 
 export default function SignInPage() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
 
   if (loading) return <FullScreenLoader label="Checking your session…" />;
   if (user) {
@@ -25,24 +18,11 @@ export default function SignInPage() {
   }
 
   return (
-    <AuthLayout
-      title={mode === 'signin' ? 'Welcome back' : 'Create owner account'}
-      subtitle={mode === 'signin' ? 'Sign in to your Personal Hub' : 'One-time setup for the workspace owner'}
-    >
-      {mode === 'signin' ? <SignInForm /> : <SignUpForm />}
-      {featureFlags.googleSignIn && <GoogleButton />}
-      {featureFlags.allowSignup && (
-        <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-          {mode === 'signin' ? 'Setting up for the first time? ' : 'Already have an account? '}
-          <button
-            type="button"
-            className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-          >
-            {mode === 'signin' ? 'Create account' : 'Sign in'}
-          </button>
-        </p>
-      )}
+    <AuthLayout title="Welcome back" subtitle="Sign in to your Personal Hub">
+      <GoogleSignIn />
+      <p className="mt-5 text-center text-xs text-slate-500 dark:text-slate-400">
+        Only the owner&apos;s Google account can open this workspace. Other accounts can sign in but cannot see any data.
+      </p>
     </AuthLayout>
   );
 }
@@ -56,110 +36,22 @@ function FormError({ message }: { message: string | null }) {
   );
 }
 
-function PasswordInput(props: ComponentPropsWithRef<'input'> & { id: string }) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <div className="relative">
-      <Input {...props} type={visible ? 'text' : 'password'} className="pr-11" />
-      <button
-        type="button"
-        onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
-        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-      >
-        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </button>
-    </div>
-  );
-}
-
-function SignInForm() {
-  const [error, setError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<SignInValues>({ resolver: zodResolver(signInSchema), defaultValues: { email: '', password: '' } });
-
-  const onSubmit = handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await authService.signIn(values.email, values.password);
-    } catch (e) {
-      setError(friendlyAuthError(e));
-    }
-  });
-
-  return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormError message={error} />
-      <Field label="Email" error={errors.email?.message}>
-        {(p) => <Input {...p} {...register('email')} type="email" autoComplete="username" inputMode="email" autoFocus />}
-      </Field>
-      <Field label="Password" error={errors.password?.message}>
-        {(p) => <PasswordInput {...p} {...register('password')} autoComplete="current-password" />}
-      </Field>
-      <div className="flex justify-end">
-        <Link to="/reset-password" className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400">
-          Forgot password?
-        </Link>
-      </div>
-      <Button type="submit" className="w-full" loading={isSubmitting} icon={<LogIn className="h-4 w-4" />}>
-        Sign in
-      </Button>
-    </form>
-  );
-}
-
-function SignUpForm() {
-  const [error, setError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<SignUpValues>({ resolver: zodResolver(signUpSchema), defaultValues: { email: '', password: '', confirm: '' } });
-
-  const onSubmit = handleSubmit(async (values) => {
-    setError(null);
-    try {
-      await authService.signUp(values.email, values.password);
-    } catch (e) {
-      setError(friendlyAuthError(e));
-    }
-  });
-
-  return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormError message={error} />
-      <Field label="Email" error={errors.email?.message}>
-        {(p) => <Input {...p} {...register('email')} type="email" autoComplete="username" autoFocus />}
-      </Field>
-      <Field label="Password" error={errors.password?.message} hint="At least 12 characters. A passphrase works well.">
-        {(p) => <PasswordInput {...p} {...register('password')} autoComplete="new-password" />}
-      </Field>
-      <Field label="Confirm password" error={errors.confirm?.message}>
-        {(p) => <PasswordInput {...p} {...register('confirm')} autoComplete="new-password" />}
-      </Field>
-      <Button type="submit" className="w-full" loading={isSubmitting} icon={<UserPlus className="h-4 w-4" />}>
-        Create account
-      </Button>
-    </form>
-  );
-}
-
-function GoogleButton() {
+function GoogleSignIn() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    authService.completeRedirect().catch((e: unknown) => setError(friendlyAuthError(e)));
+  }, []);
+
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex items-center gap-3 text-xs text-slate-400">
-        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" /> or <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-      </div>
+    <div className="space-y-3">
       <FormError message={error} />
       <Button
         variant="secondary"
         className="w-full"
         loading={busy}
+        autoFocus
         onClick={async () => {
           setError(null);
           setBusy(true);

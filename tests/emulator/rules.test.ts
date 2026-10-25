@@ -16,7 +16,7 @@ import { buildCreateData } from '@/repositories/records';
 import { buildNoteCreateData, buildNoteUpdateData, EMPTY_NOTE } from '@/repositories/notes';
 import { DEFAULT_PREFERENCES } from '@/repositories/preferences';
 import { EMPTY_TASK } from '@/repositories/tasks';
-import { OWNER, STRANGER, ownerDb, setupEnv } from './helpers';
+import { GOOGLE_TOKEN, OWNER, STRANGER, ownerDb, setupEnv } from './helpers';
 
 let env: RulesTestEnvironment;
 let owner: Firestore;
@@ -37,7 +37,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await env.clearFirestore();
   owner = ownerDb(env);
-  stranger = env.authenticatedContext(STRANGER).firestore() as unknown as Firestore;
+  stranger = env.authenticatedContext(STRANGER, GOOGLE_TOKEN).firestore() as unknown as Firestore;
   anon = env.unauthenticatedContext().firestore() as unknown as Firestore;
 });
 
@@ -66,6 +66,17 @@ describe('access control', () => {
     await assertFails(getDocs(collection(stranger, `users/${OWNER}/notes`)));
     await assertFails(deleteDoc(doc(stranger, notePath(OWNER))));
     await assertFails(setDoc(doc(stranger, notePath(OWNER, 'evil')), buildNoteCreateData('evil', EMPTY_NOTE, 'r')));
+  });
+
+  it('denies the owner UID when it did not sign in with Google', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), notePath(OWNER)), { title: 'secret' });
+    });
+    for (const provider of ['password', 'anonymous', 'custom', 'phone'] as const) {
+      const other = env.authenticatedContext(OWNER, { firebase: { sign_in_provider: provider } }).firestore() as unknown as Firestore;
+      await assertFails(getDoc(doc(other, notePath(OWNER))));
+      await assertFails(setDoc(doc(other, notePath(OWNER, 'x')), buildNoteCreateData('x', EMPTY_NOTE, 'r')));
+    }
   });
 
   it('denies a non-allowlisted user even inside their own user path', async () => {

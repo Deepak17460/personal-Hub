@@ -13,7 +13,7 @@ import { EMPTY_TASK, setTaskStatus } from '@/repositories/tasks';
 import { parseBackup } from '@/schemas/backup';
 import { syncStore } from '@/lib/sync/syncStore';
 import { COLLECTIONS, type CollectionName, type Note, type Task } from '@/types/models';
-import { OWNER, STRANGER, ownerDb, setupEnv } from './helpers';
+import { GOOGLE_TOKEN, OWNER, STRANGER, ownerDb, setupEnv } from './helpers';
 
 let env: RulesTestEnvironment;
 let db: Firestore;
@@ -156,7 +156,7 @@ describe('tasks, bookmarks, documents and events', () => {
 describe('preferences authorisation probe', () => {
   it('creates defaults for the owner and is denied for others', async () => {
     expect(await loadPreferences(db, OWNER)).toEqual(DEFAULT_PREFERENCES);
-    const stranger = env.authenticatedContext(STRANGER).firestore() as unknown as Firestore;
+    const stranger = env.authenticatedContext(STRANGER, GOOGLE_TOKEN).firestore() as unknown as Firestore;
     await expect(loadPreferences(stranger, STRANGER)).rejects.toMatchObject({ code: 'permission-denied' });
   });
 });

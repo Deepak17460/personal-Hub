@@ -24,7 +24,9 @@ Pricing: <https://firebase.google.com/pricing>
 | Firestore document reads | 50,000 / day | Hundreds to a few thousand per day |
 | Firestore writes / deletes | 20,000 / day each | Tens to hundreds per day (autosave is debounced) |
 | Firestore network egress | 10 GiB / month | Small |
-| Auth (email/password, Google) | No charge on Spark | Phone/SMS auth is **not** used (it costs money) |
+| Auth (Google sign-in) | No charge on Spark | Phone/SMS auth is **not** used (it costs money) |
+| Firebase Hosting storage | 10 GB | A few MB per release (old releases can be pruned in the console) |
+| Firebase Hosting transfer | 360 MB / day | Small: the service worker serves the app shell after the first load |
 
 What happens at a limit: on Spark, Firestore **stops serving** requests over the daily quota until
 the quota resets — it does not bill you, because there is no billing account. The app keeps

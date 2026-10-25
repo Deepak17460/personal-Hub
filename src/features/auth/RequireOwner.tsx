@@ -57,7 +57,7 @@ function NotAuthorized({ uid, email, onSignOut }: { uid: string; email: string |
     <StatusScreen
       icon={<ShieldAlert className="h-6 w-6" />}
       title="This account is not authorised"
-      message={`You are signed in${email ? ` as ${email}` : ''}, but this account is not on the owner allowlist in the Firestore Security Rules. If this is your owner account, add the UID below with "npm run owner:set" and deploy the rules.`}
+      message={`You are signed in with Google${email ? ` as ${email}` : ''}, but this account is not on the owner allowlist in the Firestore Security Rules, so no data is accessible. If this is your own account, copy the Firebase UID below (also shown in Firebase Console → Authentication → Users → "User UID"), run "npm run owner:set -- <UID>", test and deploy the rules.`}
       action={
         <div className="flex w-full flex-col items-center gap-3">
           <code className="w-full rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs break-all text-slate-700 dark:bg-slate-800 dark:text-slate-200">{uid}</code>

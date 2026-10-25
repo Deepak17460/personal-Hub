@@ -1,23 +1,18 @@
 const AUTH_MESSAGES: Record<string, string> = {
-  'auth/invalid-credential': 'Incorrect email or password.',
-  'auth/invalid-login-credentials': 'Incorrect email or password.',
-  'auth/wrong-password': 'Incorrect email or password.',
-  'auth/user-not-found': 'Incorrect email or password.',
-  'auth/invalid-email': 'That email address is not valid.',
   'auth/user-disabled': 'This account has been disabled.',
   'auth/too-many-requests': 'Too many attempts. Please wait a few minutes and try again.',
   'auth/network-request-failed': 'Network error. Check your connection and try again.',
-  'auth/email-already-in-use': 'An account with this email already exists. Try signing in.',
-  'auth/weak-password': 'Password is too weak. Use at least 8 characters.',
-  'auth/popup-closed-by-user': 'The sign-in window was closed before finishing.',
+  'auth/popup-closed-by-user': 'The Google sign-in window was closed before finishing.',
   'auth/cancelled-popup-request': 'Another sign-in window is already open.',
   'auth/popup-blocked': 'Your browser blocked the sign-in pop-up. Allow pop-ups for this site and retry.',
   'auth/unauthorized-domain': 'This domain is not authorised for sign-in. Add it in Firebase Authentication settings.',
-  'auth/operation-not-allowed': 'This sign-in method is not enabled for the Firebase project.',
+  'auth/operation-not-allowed': 'Google sign-in is not enabled for this Firebase project.',
   'auth/admin-restricted-operation': 'New account registration is disabled for this app.',
   'auth/requires-recent-login': 'Please sign in again to complete this action.',
   'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method.',
-  'auth/missing-email': 'Enter your email address.',
+  'auth/web-storage-unsupported': 'This browser blocks the storage needed for sign-in. Disable private mode or allow site data.',
+  'auth/operation-not-supported-in-this-environment': 'Sign-in is not supported in this browser view. Open the site in your regular browser.',
+  'auth/internal-error': 'Google sign-in failed. Check your connection and try again.',
 };
 
 export function errorCode(error: unknown): string | undefined {

@@ -23,6 +23,8 @@ export async function setupEnv(projectId: string): Promise<RulesTestEnvironment>
   });
 }
 
+export const GOOGLE_TOKEN = { firebase: { sign_in_provider: 'google.com' } } as const;
+
 export function ownerDb(env: RulesTestEnvironment): Firestore {
-  return env.authenticatedContext(OWNER).firestore() as unknown as Firestore;
+  return env.authenticatedContext(OWNER, GOOGLE_TOKEN).firestore() as unknown as Firestore;
 }

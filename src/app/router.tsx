@@ -14,7 +14,6 @@ const DocumentsPage = lazy(() => import('@/features/documents/DocumentsPage'));
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
 const SearchPage = lazy(() => import('@/features/search/SearchPage'));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
-const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage'));
 
 function NotFound() {
   return (
@@ -29,7 +28,6 @@ function NotFound() {
 
 export const router = createBrowserRouter([
   { path: '/signin', element: <SignInPage />, errorElement: <RouteErrorElement /> },
-  { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <RouteErrorElement /> },
   {
     path: '/',
     element: (

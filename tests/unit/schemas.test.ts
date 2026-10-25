@@ -8,7 +8,6 @@ import {
   taskFieldsSchema,
 } from '@/schemas/entities';
 import { dedupeTags } from '@/schemas/common';
-import { signUpSchema } from '@/features/auth/authSchemas';
 import { toBookmarkFields } from '@/features/bookmarks/BookmarkForm';
 import { toDocumentFields } from '@/features/documents/DocumentForm';
 import { toEventFields } from '@/features/calendar/EventForm';
@@ -47,12 +46,6 @@ describe('entity schemas', () => {
 
   it('dedupes tags case-insensitively', () => {
     expect(dedupeTags(['Work', 'work ', ' home', '', 'Home'])).toEqual(['Work', 'home']);
-  });
-
-  it('enforces a strong password and matching confirmation on sign-up', () => {
-    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'short', confirm: 'short' }).success).toBe(false);
-    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'a-long-passphrase', confirm: 'different-phrase' }).success).toBe(false);
-    expect(signUpSchema.safeParse({ email: 'a@b.co', password: 'a-long-passphrase', confirm: 'a-long-passphrase' }).success).toBe(true);
   });
 });
 

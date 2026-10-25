@@ -4,7 +4,7 @@
 Browser (PWA)                                    Google Firebase (Spark)
 ┌──────────────────────────────────────┐        ┌─────────────────────────────┐
 │ React UI ─ features/*                │        │ Firebase Auth               │
-│   │                                  │  HTTPS │  email/password (+ Google)  │
+│   │                                  │  HTTPS │  Google sign-in only        │
 │ hooks/useData ─ lib/firestore/       │◄──────►│                             │
 │   liveQuery (shared listeners)       │        │ Cloud Firestore             │
 │   │                                  │        │  users/{uid}/...            │

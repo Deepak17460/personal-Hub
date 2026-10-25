@@ -1,13 +1,12 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authMock = vi.hoisted(() => ({
   listener: null as null | ((u: unknown) => void),
-  signIn: vi.fn(),
-  signUp: vi.fn(),
-  resetPassword: vi.fn(),
+  signInWithGoogle: vi.fn(),
+  completeRedirect: vi.fn(),
 }));
 
 vi.mock('@/features/auth/authService', () => ({
@@ -17,25 +16,23 @@ vi.mock('@/features/auth/authService', () => ({
       cb(null);
       return () => {};
     },
-    signIn: authMock.signIn,
-    signUp: authMock.signUp,
-    resetPassword: authMock.resetPassword,
-    signInWithGoogle: vi.fn(),
+    signInWithGoogle: authMock.signInWithGoogle,
+    completeRedirect: authMock.completeRedirect,
     signOut: vi.fn(),
   },
 }));
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import SignInPage from '@/features/auth/SignInPage';
-import ResetPasswordPage from '@/features/auth/ResetPasswordPage';
 
-function renderAt(path: string) {
+const authError = (code: string) => Object.assign(new Error(code), { code });
+
+function renderSignIn() {
   return render(
     <AuthProvider>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={['/signin']}>
         <Routes>
           <Route path="/signin" element={<SignInPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/" element={<p>Workspace home</p>} />
         </Routes>
       </MemoryRouter>
@@ -43,49 +40,44 @@ function renderAt(path: string) {
   );
 }
 
-describe('sign-in flow', () => {
+describe('Google-only sign-in page', () => {
   beforeEach(() => {
-    authMock.signIn.mockReset();
-    authMock.resetPassword.mockReset();
+    authMock.signInWithGoogle.mockReset().mockResolvedValue(undefined);
+    authMock.completeRedirect.mockReset().mockResolvedValue(undefined);
   });
 
-  it('validates input before calling Firebase', async () => {
-    renderAt('/signin');
-    await userEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
-    expect(await screen.findByText('Email is required')).toBeInTheDocument();
-    expect(screen.getByText('Password is required')).toBeInTheDocument();
-    expect(authMock.signIn).not.toHaveBeenCalled();
+  it('offers only "Continue with Google" — no email, password, sign-up or reset UI', () => {
+    renderSignIn();
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /forgot password/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 
-  it('submits credentials and shows a friendly error on failure', async () => {
-    authMock.signIn.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/invalid-credential' }));
-    renderAt('/signin');
-    await userEvent.type(screen.getByLabelText('Email'), 'me@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'secret-pass');
-    await userEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
-    expect(authMock.signIn).toHaveBeenCalledWith('me@example.com', 'secret-pass');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password.');
+  it('starts Google sign-in when the button is clicked', async () => {
+    renderSignIn();
+    await userEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    expect(authMock.signInWithGoogle).toHaveBeenCalledOnce();
+  });
+
+  it('shows a friendly error when sign-in fails', async () => {
+    authMock.signInWithGoogle.mockRejectedValueOnce(authError('auth/popup-closed-by-user'));
+    renderSignIn();
+    await userEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The Google sign-in window was closed before finishing.');
+  });
+
+  it('reports an error returned from a sign-in redirect', async () => {
+    authMock.completeRedirect.mockRejectedValueOnce(authError('auth/unauthorized-domain'));
+    renderSignIn();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/domain is not authorised/i);
   });
 
   it('redirects to the workspace once a user is signed in', async () => {
-    renderAt('/signin');
+    renderSignIn();
     act(() => authMock.listener?.({ uid: 'u1', email: 'me@example.com' }));
     expect(await screen.findByText('Workspace home')).toBeInTheDocument();
-  });
-
-  it('toggles password visibility', async () => {
-    renderAt('/signin');
-    const pwd = screen.getByLabelText('Password');
-    expect(pwd).toHaveAttribute('type', 'password');
-    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
-    expect(pwd).toHaveAttribute('type', 'text');
-  });
-
-  it('sends a password reset without revealing whether the account exists', async () => {
-    authMock.resetPassword.mockRejectedValueOnce(Object.assign(new Error('x'), { code: 'auth/user-not-found' }));
-    renderAt('/reset-password');
-    await userEvent.type(screen.getByLabelText('Email'), 'nobody@example.com');
-    await userEvent.click(screen.getByRole('button', { name: /send reset link/i }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/if an account exists/i));
   });
 });
