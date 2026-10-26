@@ -1,24 +1,45 @@
 rules_version = '2';
 
-// Personal Hub — Firestore Security Rules
+// Personal Hub â€” Firestore Security Rules
 // Everything is denied unless a rule below explicitly allows it.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ---------------------------------------------------------------------------------
-    // Owner allowlist (Firebase Auth UIDs). Set with:  npm run owner:set -- <YOUR_UID>
-    // While the placeholder is present nobody can read or write any data.
+    // Access allowlists (Firebase Auth UIDs). Managed only by editing this file and
+    // deploying it, which requires Firebase project access; there is no in-app way to
+    // change them. Set with:  npm run access:set -- --admin <UID> --member <UID>
+    // While the admin placeholder is present nobody can read or write any data.
     // ---------------------------------------------------------------------------------
-    function ownerUids() {
+    function adminUids() {
       return ['__OWNER_UID__'];
+    }
+    function memberUids() {
+      return [];
     }
 
     // Only Google sign-in is accepted; any other provider is denied even for an allowlisted UID.
-    function isOwner(uid) {
+    function isGoogleUser() {
       return request.auth != null
-        && request.auth.uid == uid
-        && request.auth.uid in ownerUids()
         && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function isAdmin() {
+      return isGoogleUser() && request.auth.uid in adminUids();
+    }
+    function isAuthorized() {
+      return isGoogleUser() && (request.auth.uid in adminUids() || request.auth.uid in memberUids());
+    }
+
+    // Each authorised user (admin or member) can reach only their own users/{uid} data.
+    // Data is never shared between users, and the admin role grants no access to others' data.
+    function isOwner(uid) {
+      return isAuthorized() && request.auth.uid == uid;
+    }
+
+    // Role probe for the UI: only an admin may read access/admin (the document need not exist).
+    // Nothing under access/ is writable from any client.
+    match /access/{role} {
+      allow get: if role == 'admin' && isAdmin();
     }
 
     // ---------- Generic validators ----------

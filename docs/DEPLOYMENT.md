@@ -75,6 +75,23 @@ fine for this first, deny-all deploy.)
 6. Commit the updated `firebase/firestore.rules`. A UID is an identifier, not a credential; it
    is safe in a private or public repository.
 
+### Adding a second person (member)
+
+The member signs in once and sends you the UID shown on their "not authorised" screen (check it
+in **Authentication → Users**: provider Google, expected email). Then, as the admin:
+
+```sh
+node scripts/set-access.mjs --add-member <MEMBER_UID>     # or: npm run member:add -- <MEMBER_UID>
+node scripts/set-access.mjs --list
+npm run test:rules
+npm run deploy:firestore -- --project personal-hub-ea5ea
+```
+
+(In PowerShell, `npm run … -- --flag` drops the `--`; call `node scripts/set-access.mjs` directly
+for commands with flags.) The member gets an empty private workspace at `users/<their UID>/`.
+Remove them with `--remove-member <UID>` and deploy again; their data stays in Firestore until you
+delete it in the console. Existing admins are never removed unless `--replace-admin` is passed.
+
 Any other Google account can complete Google sign-in (Firebase cannot stop that on the Spark plan
 without Identity Platform blocking functions), but it only ever reaches the "not authorised"
 screen: the rules require **both** an allowlisted UID **and** `sign_in_provider == 'google.com'`.

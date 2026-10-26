@@ -4,16 +4,25 @@
 
 The app is public static files; anyone can download them and read the Firebase config. That is
 by design. **The only thing standing between the internet and your data is
-`firebase/firestore.rules`**, which grants access exclusively to the Firebase Auth UID(s) in
-`ownerUids()`, only when that user signed in with **Google** (`sign_in_provider == 'google.com'`),
-and only under `users/{thatUid}/…`. Any Google account can complete sign-in; hiding UI or checking email
+`firebase/firestore.rules`**, which grants access exclusively to the Firebase Auth UIDs in
+`adminUids()` and `memberUids()`, only when that user signed in with **Google**
+(`sign_in_provider == 'google.com'`), and only under `users/{thatUid}/…`. Each user's workspace is
+private: neither role can read another user's data. Roles:
+
+- **admin** (the original owner): their own workspace. Access management (adding or removing UIDs)
+  is done only by editing the rules and deploying them, which requires Firebase project access.
+  There is no in-app or client-writable role data, so a member cannot grant themselves anything.
+- **member**: their own workspace only.
+
+Firebase project owners/editors can still see all stored data in the Firebase Console; the rules
+apply to app clients, not to the console or the Admin SDK. Any Google account can complete sign-in; hiding UI or checking email
 addresses in the frontend are conveniences, not controls.
 
 ## How each requirement is met
 
 | Requirement | Implementation |
 | --- | --- |
-| Owner allowlist by UID, enforced server-side | `ownerUids()` in `firebase/firestore.rules`; `isOwner(uid)` requires `request.auth.uid == uid`, membership in the list **and** `request.auth.token.firebase.sign_in_provider == 'google.com'`. Tested in `tests/emulator/rules.test.ts` (unauthenticated, other users, non-allowlisted Google user in their own path, the owner UID via password/anonymous/custom/phone tokens, paths outside `users/`). |
+| Allowlist by UID with roles, enforced server-side | `adminUids()` / `memberUids()` in `firebase/firestore.rules`; `isOwner(uid)` requires `request.auth.uid == uid`, membership in either list **and** `request.auth.token.firebase.sign_in_provider == 'google.com'`. The UI reads the role by probing `access/admin`, which only admins may `get`; nothing under `access/` is writable. Tested in `tests/emulator/rules.test.ts` (unauthenticated, other users, non-allowlisted Google user in their own path, the owner UID via password/anonymous/custom/phone tokens, paths outside `users/`) and `tests/emulator/roles.test.ts` (member CRUD in own space, admin and member cannot reach each other's data in any collection, collection-group queries denied, the role probe, no client writes to `access/`, member with a non-Google token denied). |
 | Not relying on the frontend | The UI's "not authorised" screen is driven by the server's `permission-denied` response, not by a client-side list. |
 | Schema enforcement | Rules check exact field sets, types, string/array sizes, ID = document ID, timestamps (`updatedAt == request.time`), immutable `createdAt`, and a note revision chain. |
 | No admin credentials or service-account keys in the client | Only the public web config (`VITE_FIREBASE_*`). No Admin SDK, no service account anywhere in the repo. |

@@ -241,7 +241,7 @@ function InstallSection() {
 }
 
 function SecuritySection() {
-  const { user } = useSession();
+  const { user, role } = useSession();
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const state = useSyncState();
@@ -277,10 +277,26 @@ function SecuritySection() {
             </dd>
           </div>
           <div className="flex justify-between gap-4">
+            <dt>Role</dt>
+            <dd className="text-right font-medium text-slate-800 dark:text-slate-200">{role === 'admin' ? 'Admin' : 'Member'}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
             <dt>User ID</dt>
             <dd className="truncate text-right font-mono">{user.uid}</dd>
           </div>
         </dl>
+        {role === 'admin' ? (
+          <p className="text-xs text-slate-500">
+            Access is managed only in the Firestore Security Rules (<code>npm run access:list</code>, <code>member:add</code>,{' '}
+            <code>member:remove</code>, then test and deploy the rules). Each account has its own private workspace; your role does not
+            grant access to a member’s data in the app.
+          </p>
+        ) : (
+          <p className="text-xs text-slate-500">
+            Your workspace is private to your account: other users of this app cannot read it. Access is managed by the admin. Note that the
+            Firebase project’s owners can still see stored data in the Firebase Console.
+          </p>
+        )}
         <p className="text-xs text-slate-500">
           You sign in with Google. Protect your Google account with 2-Step Verification; manage it at myaccount.google.com.
         </p>

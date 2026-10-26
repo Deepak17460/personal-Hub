@@ -5,8 +5,9 @@ reminders, global search and JSON backup. It is a static PWA (React + Vite) that
 to Firebase Authentication and Cloud Firestore. There is no custom backend and nothing that
 needs a paid server.
 
-- **Access control lives in Firestore Security Rules**: only the Firebase Auth UID(s) listed in
-  `firebase/firestore.rules` can read or write anything. Signing up does not grant access.
+- **Access control lives in Firestore Security Rules**: only the Firebase Auth UIDs listed in
+  `firebase/firestore.rules` (one admin plus optional members) can read or write anything, each
+  only their own workspace. Signing up does not grant access.
 - **Firestore is the only persistent store** for notes, tasks, bookmarks, events, document
   metadata and settings. The Firestore SDK runs with a memory-only cache (no IndexedDB
   persistence). Offline, the app shows a clear banner and pauses editing. The installable PWA's
@@ -57,7 +58,8 @@ Emulator data is in memory and disappears when the emulators stop.
 | `npm test` | Unit and component tests (jsdom) |
 | `npm run test:rules` | Firestore rules and repository tests inside the emulators |
 | `npm run test:all` | Both test suites |
-| `npm run owner:set -- <uid>` | Write the owner UID allowlist into `firebase/firestore.rules` |
+| `npm run owner:set -- <uid>` | Add an admin UID to `firebase/firestore.rules` (existing admins are kept) |
+| `npm run access:list` / `member:add` / `member:remove` | Show or change the member allowlist (`scripts/set-access.mjs`) |
 | `npm run rules:check` | Fails if the owner placeholder is still present |
 | `npm run deploy:firestore -- --project <id>` | Check, then deploy rules and indexes |
 | `npm run icons` | Regenerate PWA icons from `scripts/generate-icons.mjs` |

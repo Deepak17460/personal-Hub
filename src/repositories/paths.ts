@@ -1,7 +1,7 @@
 import { collection, doc, type CollectionReference, type DocumentReference, type Firestore } from 'firebase/firestore';
 import type { CollectionName } from '@/types/models';
 
-/** All private data lives under users/{uid}/..., and rules only allow the allowlisted owner UID. */
+/** All private data lives under users/{uid}/..., and rules only let an allowlisted user reach their own uid. */
 export function colRef(db: Firestore, uid: string, name: CollectionName): CollectionReference {
   return collection(db, 'users', uid, name);
 }

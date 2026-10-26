@@ -33,8 +33,8 @@ export function mapPreferences(snap: DocumentSnapshot): Preferences {
 }
 
 /**
- * Authorisation probe used right after sign-in. Rules only let the allowlisted owner read
- * this document, so `permission-denied` here means the signed-in account is not the owner.
+ * Authorisation probe used right after sign-in. Rules only let an allowlisted admin or member
+ * read their own document, so `permission-denied` here means the account is not allowlisted.
  */
 export async function loadPreferences(db: Firestore, uid: string): Promise<Preferences> {
   const snap = await getDoc(preferencesRef(db, uid));

@@ -9,7 +9,7 @@ Browser (PWA)                                    Google Firebase (Spark)
 │   liveQuery (shared listeners)       │        │ Cloud Firestore             │
 │   │                                  │        │  users/{uid}/...            │
 │ repositories/* (only Firestore code) │        │  Security Rules = the       │
-│   │                                  │        │  owner allowlist + schema   │
+│   │                                  │        │  admin/member allowlist     │
 │ Firestore SDK (memory-only cache)    │        └─────────────────────────────┘
 │ Service worker (static assets only)  │
 └──────────────────────────────────────┘

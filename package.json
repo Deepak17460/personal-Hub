@@ -19,7 +19,11 @@
     "test:all": "npm run test && npm run test:rules",
     "emulators": "firebase emulators:start --only firestore,auth --project demo-personal-hub",
     "icons": "node scripts/generate-icons.mjs",
-    "owner:set": "node scripts/set-owner.mjs",
+    "owner:set": "node scripts/set-access.mjs --admin",
+    "access:set": "node scripts/set-access.mjs",
+    "access:list": "node scripts/set-access.mjs --list",
+    "member:add": "node scripts/set-access.mjs --add-member",
+    "member:remove": "node scripts/set-access.mjs --remove-member",
     "rules:check": "node scripts/check-rules.mjs",
     "deploy:firestore": "node scripts/check-rules.mjs && firebase deploy --only firestore:rules,firestore:indexes"
   },

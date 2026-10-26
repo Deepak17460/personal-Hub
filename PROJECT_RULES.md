@@ -4,7 +4,7 @@ These rules apply to all changes unless a task explicitly calls for a migration 
 
 ## Scope and architecture
 
-1. Keep Personal Hub a private, single-owner organizer. Do not add collaboration, shared data, public profiles, or multi-tenant access by default.
+1. Keep Personal Hub a private organizer: one admin plus allowlisted members, each with a separate workspace. Do not add collaboration, shared data, public profiles, or multi-tenant access by default.
 2. Put page and domain UI in `src/features/`, reusable UI in `src/components/`, and Firestore access in `src/repositories/`. Components must not construct Firestore paths or write directly to Firestore.
 3. Use `@/` imports for code under `src/` and preserve lazy loading for feature pages in `src/app/router.tsx`.
 4. Prefer existing primitives and patterns over adding a dependency or a parallel UI/data abstraction.
@@ -19,7 +19,7 @@ These rules apply to all changes unless a task explicitly calls for a migration 
 
 ## Firebase security and synchronization
 
-10. All personal data remains beneath `users/{uid}/...`, and all Firestore rules remain owner-only. Never loosen the allowlist or add broad authenticated-user access as a convenience.
+10. All personal data remains beneath `users/{uid}/...`, and every rule only lets an allowlisted (admin or member) Google user reach their own `users/{uid}` data. Never loosen the allowlists, add cross-user or shared access without an explicit request, or add broad authenticated-user access as a convenience.
 11. Never commit credentials or `.env.local`. `VITE_FIREBASE_*` browser configuration is not a security control; Firestore rules are.
 12. Preserve note optimistic concurrency: updates must use the current `prevRevId`/new `revId` protocol, and rejected edits must retain the conflict-copy path.
 13. Preserve recurring-task completion as the atomic update that marks the current task done and creates the next instance.

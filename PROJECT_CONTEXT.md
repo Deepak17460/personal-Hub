@@ -22,7 +22,7 @@ Imports use the `@/` alias for `src/`.
 
 All personal data is scoped to `users/{uid}/...`; the collections are `notes`, `tasks`, `bookmarks`, `documents`, and `events`. Preferences live at `users/{uid}/settings/preferences`.
 
-Firestore access is owner-only. The allowlist in `firebase/firestore.rules` is deliberately a placeholder until configured with `npm run owner:set -- <FIREBASE_AUTH_UID>`. Do not weaken those rules, expose a general user-data route, or assume Firebase client configuration is secret—the rules are the protection.
+Firestore access is limited to allowlisted UIDs with two roles, `adminUids()` and `memberUids()` in `firebase/firestore.rules` (managed with `scripts/set-access.mjs`), and each user can reach only their own `users/{uid}` data. Nothing is shared between users unless sharing is explicitly designed and requested. Do not weaken those rules, expose a general user-data route, or assume Firebase client configuration is secret—the rules are the protection.
 
 Treat a Firestore document shape as a contract across `src/types/models.ts`, `src/schemas/`, repository builders/mappers, backup import/export, Firestore rules, and relevant tests. When adding or changing persisted fields, update every affected layer and deploy/test the rules.
 

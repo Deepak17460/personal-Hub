@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, LogOut, ShieldAlert, WifiOff } from 'lucide-react';
 import { getDb } from '@/lib/firebase/client';
 import { errorCode } from '@/lib/firebase/errors';
+import { loadRole } from '@/repositories/access';
 import { loadPreferences } from '@/repositories/preferences';
 import { Button } from '@/components/ui/Button';
 import { FullScreenLoader } from '@/components/layout/FullScreenLoader';
@@ -13,7 +14,8 @@ import { signOutEverywhereLocal } from './signOut';
 
 /**
  * Route guard: requires a signed-in user AND verifies with Firestore that this UID is on the
- * owner allowlist (enforced by Security Rules). Hiding UI is never the security boundary.
+ * admin or member allowlist (enforced by Security Rules), then reads the role for the UI.
+ * Hiding UI is never the security boundary.
  */
 export function RequireOwner({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -22,7 +24,10 @@ export function RequireOwner({ children }: { children: ReactNode }) {
 
   const probe = useQuery({
     queryKey: ['owner-probe', user?.uid],
-    queryFn: () => loadPreferences(getDb(), user!.uid),
+    queryFn: async () => {
+      await loadPreferences(getDb(), user!.uid);
+      return { role: await loadRole(getDb()) };
+    },
     enabled: Boolean(user),
     retry: (count, error) => errorCode(error) !== 'permission-denied' && count < 2,
     staleTime: Infinity,
@@ -56,7 +61,7 @@ export function RequireOwner({ children }: { children: ReactNode }) {
     );
   }
 
-  return <SessionProvider value={{ user, uid: user.uid, db: getDb() }}>{children}</SessionProvider>;
+  return <SessionProvider value={{ user, uid: user.uid, db: getDb(), role: probe.data.role }}>{children}</SessionProvider>;
 }
 
 function NotAuthorized({ uid, email, onSignOut }: { uid: string; email: string | null; onSignOut: () => void }) {
@@ -65,7 +70,7 @@ function NotAuthorized({ uid, email, onSignOut }: { uid: string; email: string |
     <StatusScreen
       icon={<ShieldAlert className="h-6 w-6" />}
       title="This account is not authorised"
-      message={`You are signed in with Google${email ? ` as ${email}` : ''}, but this account is not on the owner allowlist in the Firestore Security Rules, so no data is accessible. If this is your own account, copy the Firebase UID below (also shown in Firebase Console → Authentication → Users → "User UID"), run "npm run owner:set -- <UID>", test and deploy the rules.`}
+      message={`You are signed in with Google${email ? ` as ${email}` : ''}, but this account is not on the access allowlist in the Firestore Security Rules, so no data is accessible. To request access, send the Firebase UID below to the admin of this Personal Hub; only they can add it.`}
       action={
         <div className="flex w-full flex-col items-center gap-3">
           <code className="w-full rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs break-all text-slate-700 dark:bg-slate-800 dark:text-slate-200">{uid}</code>
