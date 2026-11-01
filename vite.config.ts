@@ -43,19 +43,31 @@ export default defineConfig(({ mode }) => ({
   preview: {
     headers: productionHeaders(mode),
   },
+  server: {
+    proxy: {
+      // Avoid browser CORS during local development when talking to the Bedrock gateway.
+      '/ai-proxy': {
+        target: 'https://d2cmgqlwjalmr4.cloudfront.net',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/ai-proxy/, ''),
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'prompt',
+      // Installed PWAs were stuck on old shells (AI proxy/CSP). Auto-activate new SWs.
+      registerType: 'autoUpdate',
       injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'theme-init.js'],
       manifest: {
         name: 'Personal Hub',
         short_name: 'Hub',
         description: 'My private cloud workspace for notes, tasks, bookmarks, documents and calendar.',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#1f1f1f',
+        background_color: '#1f1f1f',
         display: 'standalone',
         orientation: 'any',
         start_url: '/',
@@ -69,11 +81,13 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         // App shell only: same-origin static build assets are precached. No runtime caching,
         // so Firestore/Auth responses (cross-origin) and private data are never stored by the
-        // service worker. Record data lives only in Firestore and in memory while the app is open.
+        // service worker. AI calls go directly to the Cloudflare Worker (not via Hosting rewrites).
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/__\//],
         cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [],
       },
       devOptions: { enabled: false },

@@ -31,6 +31,9 @@ describe('Firebase Hosting headers', () => {
     expect(csp).toBe(cloudflareCsp);
     expect(csp).toMatch(/frame-src 'self' https:\/\/\*\.firebaseapp\.com/);
     expect(csp).toContain('https://apis.google.com');
+    expect(csp).toContain('https://d2cmgqlwjalmr4.cloudfront.net');
+    expect(csp).toContain('https://*.workers.dev');
+    expect(csp).toContain('https://personal-hub-ai-proxy.csedeepak123-342.workers.dev');
     expect(header(security, 'X-Frame-Options')).toBe('DENY');
     expect(header(security, 'Cache-Control')).toBe('no-cache');
   });

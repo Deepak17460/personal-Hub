@@ -51,10 +51,41 @@ describe('entity schemas', () => {
 
 describe('form conversion', () => {
   it('converts task form values', () => {
-    const fields = toTaskFields({ ...EMPTY_TASK, title: '  Buy milk ', dueDate: '', subtasks: [{ id: 'a', title: ' ', done: false }] });
+    const fields = toTaskFields({
+      title: '  Buy milk ',
+      description: '',
+      priority: 'medium',
+      status: 'todo',
+      dueDate: '',
+      dueTime: '',
+      reminder: 'none',
+      category: '',
+      tags: [],
+      subtasks: [{ id: 'a', title: ' ', done: false }],
+      recurrence: EMPTY_TASK.recurrence,
+    });
     expect(fields.title).toBe('Buy milk');
     expect(fields.dueDate).toBeNull();
+    expect(fields.dueTime).toBeNull();
+    expect(fields.reminderMinutes).toBeNull();
     expect(fields.subtasks).toHaveLength(0);
+
+    const timed = toTaskFields({
+      title: 'Call bank',
+      description: '',
+      priority: 'high',
+      status: 'todo',
+      dueDate: '2026-11-03',
+      dueTime: '14:30',
+      reminder: '30',
+      category: '',
+      tags: [],
+      subtasks: [],
+      recurrence: EMPTY_TASK.recurrence,
+    });
+    expect(timed.dueDate).toBe('2026-11-03');
+    expect(timed.dueTime).toBe('14:30');
+    expect(timed.reminderMinutes).toBe(30);
   });
 
   it('normalises bookmark URLs and default titles', () => {

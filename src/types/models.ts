@@ -45,6 +45,10 @@ export interface TaskFields {
   priority: Priority;
   status: TaskStatus;
   dueDate: string | null;
+  /** Local HH:MM when the task is due. null = all-day / date-only. */
+  dueTime: string | null;
+  /** Minutes before due (all-day uses 09:00 local). null = no notification. */
+  reminderMinutes: number | null;
   category: string;
   tags: string[];
   subtasks: Subtask[];

@@ -1,5 +1,6 @@
 import {
   Bookmark,
+  Bot,
   CalendarDays,
   CheckSquare,
   FileText,
@@ -22,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/notes', label: 'Notes', icon: FileText, mobile: true },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare, mobile: true },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, mobile: true },
+  { to: '/assistant', label: 'Assistant', icon: Bot },
   { to: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
   { to: '/documents', label: 'Documents', icon: FolderOpen },
   { to: '/search', label: 'Search', icon: Search },

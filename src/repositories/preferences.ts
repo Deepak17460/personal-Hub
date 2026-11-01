@@ -16,7 +16,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
     notes: true,
     bookmarks: true,
     recent: true,
-    sync: true,
+    sync: false,
   },
   schemaVersion: 1,
 };

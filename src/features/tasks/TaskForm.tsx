@@ -11,6 +11,7 @@ import { useSession } from '@/features/auth/session';
 import { dedupeTags } from '@/schemas/common';
 import { taskFormSchema, type TaskFormValues } from '@/schemas/entities';
 import { createRecord, updateRecord } from '@/repositories/records';
+import { REMINDER_OPTIONS } from '@/features/calendar/occurrences';
 import { EMPTY_TASK } from '@/repositories/tasks';
 import { serverTimestamp } from 'firebase/firestore';
 import type { Task, TaskFields } from '@/types/models';
@@ -19,23 +20,31 @@ import { PRIORITY_LABEL } from './TaskBits';
 
 export function toTaskFields(values: TaskFormValues): TaskFields {
   return {
-    ...values,
     title: values.title.trim(),
+    description: values.description,
+    priority: values.priority,
+    status: values.status,
     dueDate: values.dueDate || null,
+    dueTime: values.dueDate ? values.dueTime || null : null,
+    reminderMinutes: !values.dueDate || values.reminder === 'none' ? null : Number(values.reminder),
     tags: dedupeTags(values.tags),
     category: values.category.trim(),
     subtasks: values.subtasks.filter((s) => s.title.trim()),
+    recurrence: values.recurrence,
   };
 }
 
 function toFormValues(task: Task | null, defaults?: Partial<TaskFields>): TaskFormValues {
   const base = { ...EMPTY_TASK, ...defaults, ...(task ?? {}) };
+  const known = REMINDER_OPTIONS.some((o) => o.value === String(base.reminderMinutes));
   return {
     title: base.title,
     description: base.description,
     priority: base.priority,
     status: base.status,
     dueDate: base.dueDate ?? '',
+    dueTime: base.dueTime ?? '',
+    reminder: base.reminderMinutes == null ? 'none' : known ? (String(base.reminderMinutes) as TaskFormValues['reminder']) : '30',
     category: base.category,
     tags: base.tags,
     subtasks: base.subtasks,
@@ -102,7 +111,7 @@ function TaskFormBody({ task, defaults, categories, onDone }: { task: Task | nul
         {(p) => <Textarea {...p} {...register('description')} rows={3} placeholder="Optional details" />}
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Priority">
           {(p) => (
             <Select {...p} {...register('priority')}>
@@ -126,7 +135,22 @@ function TaskFormBody({ task, defaults, categories, onDone }: { task: Task | nul
         <Field label="Due date" error={errors.dueDate?.message}>
           {(p) => <Input {...p} {...register('dueDate')} type="date" />}
         </Field>
+        <Field label="Due time" error={errors.dueTime?.message} hint="Optional — enables timed alerts">
+          {(p) => <Input {...p} {...register('dueTime')} type="time" />}
+        </Field>
       </div>
+
+      <Field label="Reminder" hint="Fires while Personal Hub is open (tab or installed app)">
+        {(p) => (
+          <Select {...p} {...register('reminder')}>
+            {REMINDER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Category" error={errors.category?.message}>

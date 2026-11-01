@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, KeyRound, LayoutDashboard, LogOut, Monitor, Moon, Palette, Smartphone, Sun, User, Wifi } from 'lucide-react';
+import { Bell, KeyRound, LayoutDashboard, LogOut, Monitor, Moon, Palette, RefreshCw, Smartphone, Sun, User, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, PageHeader, Segmented } from '@/components/ui/Display';
 import { Field, Input, Select, Switch } from '@/components/ui/Form';
@@ -17,7 +17,7 @@ import { friendlyAuthError } from '@/lib/firebase/errors';
 import type { DashboardWidget, ThemePreference } from '@/types/models';
 import { BackupSection } from './BackupSection';
 
-const WIDGET_LABELS: Record<DashboardWidget, string> = {
+const WIDGET_LABELS: { [K in Exclude<DashboardWidget, 'sync'>]: string } = {
   stats: 'Task summary',
   quickActions: 'Quick actions',
   tasks: "Today's tasks",
@@ -25,7 +25,6 @@ const WIDGET_LABELS: Record<DashboardWidget, string> = {
   notes: 'Recent notes',
   bookmarks: 'Pinned bookmarks',
   recent: 'Recently modified',
-  sync: 'Sync & storage',
 };
 
 export default function SettingsPage() {
@@ -130,6 +129,7 @@ function NotificationSection() {
   const toast = useToast();
   const supported = typeof Notification !== 'undefined';
   const [permission, setPermission] = useState(supported ? Notification.permission : 'denied');
+  const [testing, setTesting] = useState(false);
 
   const toggle = async (on: boolean) => {
     if (!on) {
@@ -150,6 +150,31 @@ function NotificationSection() {
     }
   };
 
+  const sendTest = async () => {
+    setTesting(true);
+    try {
+      if (!supported) {
+        toast.warning('This browser does not support notifications.');
+        return;
+      }
+      const result = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+      setPermission(result);
+      if (result !== 'granted') {
+        toast.warning('Allow notifications first, then try again.');
+        return;
+      }
+      if (!prefs.notificationsEnabled) update({ notificationsEnabled: true });
+      const { sendTestReminderNotification } = await import('@/features/calendar/useReminders');
+      const { REMINDER_IMAGE, buildTestReminderCopy } = await import('@/features/calendar/reminderCopy');
+      const copy = buildTestReminderCopy();
+      toast.reminder({ title: copy.title, body: copy.body, image: REMINDER_IMAGE });
+      const ok = await sendTestReminderNotification();
+      if (!ok) toast.warning('In-app reminder shown, but the system notification could not be sent on this device.');
+    } finally {
+      setTesting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader title="Reminders & notifications" icon={<Bell className="h-4 w-4" />} />
@@ -160,11 +185,24 @@ function NotificationSection() {
           label="System notifications"
           description={`Browser permission: ${supported ? permission : 'not supported'}`}
         />
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-indigo-50 p-3 dark:border-amber-500/20 dark:from-amber-500/10 dark:to-indigo-500/10">
+          <img src="/reminder-cartoon.jpg" alt="" className="h-14 w-14 rounded-xl object-cover shadow-sm" width={56} height={56} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Cartoon reminder alerts</p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+              Calendar and task reminders show a friendly card in the app and a system notification with this artwork.
+            </p>
+          </div>
+        </div>
+        <Button type="button" variant="secondary" size="sm" loading={testing} onClick={() => void sendTest()}>
+          Send test reminder
+        </Button>
         <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
           <p className="font-medium">How reminders work</p>
           <p className="mt-1">
-            Reminders are checked by the app while it is open (in a tab or as an installed app). They appear as in-app alerts and, if enabled, as system
-            notifications. When the app is fully closed, no reminders are delivered — this app does not use a paid push-notification server.
+            Set a reminder on a calendar item or a task (due date, optional due time, and remind-before). While Personal Hub is open (tab or
+            installed app), due reminders appear as in-app cards and, if enabled, system notifications. When the app is fully closed, browsers
+            cannot deliver these without a paid push server.
           </p>
         </div>
       </div>
@@ -178,7 +216,7 @@ function DashboardSection() {
     <Card>
       <CardHeader title="Dashboard widgets" icon={<LayoutDashboard className="h-4 w-4" />} />
       <div className="space-y-3 px-5 pb-5">
-        {(Object.keys(WIDGET_LABELS) as DashboardWidget[]).map((key) => (
+        {(Object.keys(WIDGET_LABELS) as Exclude<DashboardWidget, 'sync'>[]).map((key) => (
           <Switch
             key={key}
             label={WIDGET_LABELS[key]}
@@ -191,7 +229,21 @@ function DashboardSection() {
   );
 }
 
+async function hardRefreshAppShell() {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+  }
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  }
+  window.location.reload();
+}
+
 function SyncSection() {
+  const toast = useToast();
+  const [refreshing, setRefreshing] = useState(false);
   return (
     <Card>
       <CardHeader title="Sync & storage" icon={<Wifi className="h-4 w-4" />} action={<SyncIndicator />} />
@@ -206,6 +258,28 @@ function SyncSection() {
             <li>If the same note is edited on two devices, you will be asked which version to keep — nothing is silently overwritten. Other items use the most recent change.</li>
             <li>Firestore is not a backup of itself: export regularly.</li>
           </ul>
+        </div>
+        <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+          <p className="text-xs font-medium text-slate-800 dark:text-slate-200">Installed app looking stale?</p>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+            Clears this device’s offline app shell (not your Firestore data) and reloads the latest version. Use this if the assistant works in Chrome but not in the home-screen app.
+          </p>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="secondary"
+            icon={<RefreshCw className="h-4 w-4" />}
+            loading={refreshing}
+            onClick={() => {
+              setRefreshing(true);
+              void hardRefreshAppShell().catch(() => {
+                setRefreshing(false);
+                toast.error('Could not refresh the app shell. Try again.');
+              });
+            }}
+          >
+            Refresh app cache
+          </Button>
         </div>
       </div>
     </Card>

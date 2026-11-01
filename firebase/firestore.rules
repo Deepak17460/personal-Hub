@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Personal Hub â€” Firestore Security Rules
+// Personal Hub — Firestore Security Rules
 // Everything is denied unless a rule below explicitly allows it.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,10 +12,10 @@ service cloud.firestore {
     // While the admin placeholder is present nobody can read or write any data.
     // ---------------------------------------------------------------------------------
     function adminUids() {
-      return ['__OWNER_UID__'];
+      return ['BpfchiubuHPRnYcN8rpIw0ApZsh1'];
     }
     function memberUids() {
-      return [];
+      return ['8OpaJcqbzeW2MOOC9wYsOb6V9Li2'];
     }
 
     // Only Google sign-in is accepted; any other provider is denied even for an allowlisted UID.
@@ -96,13 +96,15 @@ service cloud.firestore {
     function validTask(id) {
       let d = request.resource.data;
       return hasExactly(['id', 'schemaVersion', 'createdAt', 'updatedAt', 'searchTokens',
-                         'title', 'description', 'priority', 'status', 'dueDate', 'category', 'tags',
-                         'subtasks', 'recurrence', 'completedAt'])
+                         'title', 'description', 'priority', 'status', 'dueDate', 'dueTime', 'reminderMinutes',
+                         'category', 'tags', 'subtasks', 'recurrence', 'completedAt'])
         && validMeta(id)
         && isReqStr(d.title, 200) && isStr(d.description, 5000)
         && d.priority in ['low', 'medium', 'high', 'critical']
         && d.status in ['todo', 'in_progress', 'done']
         && (d.dueDate == null || isDateStr(d.dueDate))
+        && (d.dueTime == null || isTimeStr(d.dueTime))
+        && (d.reminderMinutes == null || (d.reminderMinutes is int && d.reminderMinutes >= 0 && d.reminderMinutes <= 43200))
         && isStr(d.category, 60) && isTags(d.tags)
         && d.subtasks is list && d.subtasks.size() <= 50
         && isRecurrence(d.recurrence)

@@ -80,6 +80,8 @@ export function mapData<C extends CollectionName>(collection: C, id: string, d: 
         priority: ['low', 'medium', 'high', 'critical'].includes(d.priority) ? d.priority : 'medium',
         status: ['todo', 'in_progress', 'done'].includes(d.status) ? d.status : 'todo',
         dueDate: nullableStr(d.dueDate),
+        dueTime: nullableStr(d.dueTime),
+        reminderMinutes: typeof d.reminderMinutes === 'number' && Number.isFinite(d.reminderMinutes) ? d.reminderMinutes : null,
         category: str(d.category),
         tags: strArr(d.tags),
         subtasks: Array.isArray(d.subtasks)

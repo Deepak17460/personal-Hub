@@ -1,0 +1,15 @@
+{
+  "name": "personal-hub-ai-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "secret:url": "wrangler secret put CHAT_BACKEND_URL",
+    "secret:key": "wrangler secret put CHAT_BACKEND_API_KEY",
+    "secret:gemini": "wrangler secret put GEMINI_API_KEY"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
+  }
+}

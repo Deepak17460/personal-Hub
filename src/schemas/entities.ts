@@ -37,6 +37,8 @@ export const taskFieldsSchema = z.object({
   priority: z.enum(priorityValues),
   status: z.enum(taskStatusValues),
   dueDate: dateStrSchema.nullable(),
+  dueTime: timeStrSchema.nullable().default(null),
+  reminderMinutes: z.number().int().min(0).max(43_200).nullable().default(null),
   category: categorySchema,
   tags: tagsSchema,
   subtasks: z.array(subtaskSchema).max(LIMITS.subtasks),
@@ -93,9 +95,13 @@ export const documentFormSchema = documentFieldsSchema.omit({ externalUrl: true,
 });
 export type DocumentFormValues = z.infer<typeof documentFormSchema>;
 
-export const taskFormSchema = taskFieldsSchema.omit({ dueDate: true }).extend({
-  dueDate: z.string().refine((v) => v === '' || dateStrSchema.safeParse(v).success, 'Invalid date'),
-});
+export const taskFormSchema = taskFieldsSchema
+  .omit({ dueDate: true, dueTime: true, reminderMinutes: true })
+  .extend({
+    dueDate: z.string().refine((v) => v === '' || dateStrSchema.safeParse(v).success, 'Invalid date'),
+    dueTime: z.string().refine((v) => v === '' || timeStrSchema.safeParse(v).success, 'Use the format HH:MM'),
+    reminder: z.enum(['none', '0', '10', '30', '60', '1440', '10080']),
+  });
 export type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 export const eventFormSchema = eventFieldsSchema.omit({ time: true, reminderMinutes: true }).extend({

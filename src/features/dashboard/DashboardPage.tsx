@@ -3,11 +3,11 @@ import { Link } from 'react-router';
 import {
   AlarmClock,
   Bookmark as BookmarkIcon,
+  Bot,
   CalendarPlus,
   CheckCircle2,
   CheckSquare,
   Clock,
-  Cloud,
   ExternalLink,
   FilePlus2,
   FileText,
@@ -19,7 +19,6 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { Card, CardHeader, EmptyState, ListSkeleton, Badge } from '@/components/ui/Display';
-import { SyncDetails, SyncIndicator } from '@/components/layout/SyncIndicator';
 import { useSession } from '@/features/auth/session';
 import { useUpcomingOccurrences } from '@/features/calendar/useReminders';
 import { TaskCheck } from '@/features/tasks/TaskBits';
@@ -72,21 +71,32 @@ export default function DashboardPage() {
         {w.notes && <RecentNotes />}
         {w.bookmarks && <PinnedBookmarks />}
         {w.recent && <RecentlyModified />}
-        {w.sync && <SyncCard />}
       </div>
     </div>
   );
 }
 
-function Stat({ label, value, icon, tone }: { label: string; value: ReactNode; icon: ReactNode; tone: string }) {
+function Stat({
+  label,
+  value,
+  icon,
+  tone,
+  to,
+}: {
+  label: string;
+  value: ReactNode;
+  icon: ReactNode;
+  tone: string;
+  to: string;
+}) {
   return (
-    <Card className="flex items-center gap-4 p-4 sm:p-5">
+    <Link to={to} className="card flex items-center gap-4 p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md sm:p-5 dark:hover:border-indigo-500/40">
       <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', tone)}>{icon}</div>
       <div className="min-w-0">
         <p className="text-2xl font-semibold tabular-nums">{value}</p>
         <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
       </div>
-    </Card>
+    </Link>
   );
 }
 
@@ -99,23 +109,48 @@ function TaskStats() {
   const show = (v: number | undefined) => (v === undefined ? '—' : v);
   return (
     <section aria-label="Task summary" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <Stat label="Pending tasks" value={show(counts.data?.open)} icon={<ListTodo className="h-5 w-5" />} tone="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300" />
-      <Stat label="Due today" value={show(dueToday)} icon={<Clock className="h-5 w-5" />} tone="bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300" />
-      <Stat label="Overdue" value={show(counts.data?.overdue ?? fallbackOverdue)} icon={<TriangleAlert className="h-5 w-5" />} tone="bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300" />
-      <Stat label="Completed" value={show(counts.data?.done)} icon={<CheckCircle2 className="h-5 w-5" />} tone="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300" />
+      <Stat
+        label="Pending tasks"
+        value={show(counts.data?.open)}
+        icon={<ListTodo className="h-5 w-5" />}
+        tone="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"
+        to="/tasks?view=open"
+      />
+      <Stat
+        label="Due today"
+        value={show(dueToday)}
+        icon={<Clock className="h-5 w-5" />}
+        tone="bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300"
+        to="/tasks?view=today"
+      />
+      <Stat
+        label="Overdue"
+        value={show(counts.data?.overdue ?? fallbackOverdue)}
+        icon={<TriangleAlert className="h-5 w-5" />}
+        tone="bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300"
+        to="/tasks?view=overdue"
+      />
+      <Stat
+        label="Completed"
+        value={show(counts.data?.done)}
+        icon={<CheckCircle2 className="h-5 w-5" />}
+        tone="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+        to="/tasks?view=done"
+      />
     </section>
   );
 }
 
 function QuickActions() {
   const actions = [
+    { to: '/assistant', label: 'Ask AI', icon: Bot },
     { to: '/notes?new=1', label: 'New note', icon: FilePlus2 },
     { to: '/tasks?new=1', label: 'New task', icon: CheckSquare },
     { to: '/calendar?new=1', label: 'New event', icon: CalendarPlus },
     { to: '/bookmarks?new=1', label: 'Save link', icon: BookmarkIcon },
   ];
   return (
-    <section aria-label="Quick actions" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <section aria-label="Quick actions" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {actions.map(({ to, label, icon: Icon }) => (
         <Link
           key={to}
@@ -360,13 +395,3 @@ function RecentlyModified() {
   );
 }
 
-function SyncCard() {
-  return (
-    <Card>
-      <CardHeader title="Sync & storage" icon={<Cloud className="h-4 w-4" />} action={<SyncIndicator />} />
-      <div className="px-5 pb-5">
-        <SyncDetails />
-      </div>
-    </Card>
-  );
-}

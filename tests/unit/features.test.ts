@@ -104,7 +104,7 @@ describe('tasks', () => {
       task({ title: 'done', status: 'done', dueDate: '2024-03-01' }),
     ];
     expect(filterTasks(rows, 'overdue', today).map((t) => t.title)).toEqual(['overdue']);
-    expect(filterTasks(rows, 'today', today)).toHaveLength(3);
+    expect(filterTasks(rows, 'today', today).map((t) => t.title).sort()).toEqual(['today-crit', 'today-low']);
     expect(filterTasks(rows, 'done', today)).toHaveLength(1);
     expect(sortTasks(filterTasks(rows, 'open', today), 'due').map((t) => t.title)).toEqual(['overdue', 'today-crit', 'today-low', 'later', 'nodate']);
     expect(isOverdue({ status: 'done', dueDate: '2000-01-01' }, today)).toBe(false);

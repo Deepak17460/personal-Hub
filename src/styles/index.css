@@ -3,10 +3,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Segoe UI', 'Inter', ui-sans-serif, system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
   --animate-fade-in: fade-in 160ms ease-out;
   --animate-slide-up: slide-up 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-slide-in-right: slide-in-right 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --color-hub-accent: #0f6cbd;
+  --color-hub-accent-hover: #115ea3;
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -16,18 +19,48 @@
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  @keyframes slide-in-right {
+    from { opacity: 0.96; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
 }
 
 @layer base {
+  /*
+   * Outlook-inspired surfaces. Driven by html.dark so chrome (sidebar, assistant)
+   * cannot drift out of sync with the page theme the way utility dark: classes can.
+   */
+  :root {
+    --hub-canvas: #f5f5f5;
+    --hub-surface: #ffffff;
+    --hub-surface-2: #f0f0f0;
+    --hub-border: #e0e0e0;
+    --hub-text: #242424;
+    --hub-muted: #616161;
+    --hub-accent: #0f6cbd;
+    --hub-accent-soft: #eff6fc;
+    --hub-accent-text: #0f6cbd;
+  }
   html {
     -webkit-text-size-adjust: 100%;
     color-scheme: light;
   }
   html.dark {
     color-scheme: dark;
+    --hub-canvas: #1f1f1f;
+    --hub-surface: #292929;
+    --hub-surface-2: #333333;
+    --hub-border: #3b3b3b;
+    --hub-text: #ffffff;
+    --hub-muted: #adadad;
+    --hub-accent: #4f9cf9;
+    --hub-accent-soft: #0c2d48;
+    --hub-accent-text: #7eb6f6;
   }
   body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    background: var(--hub-canvas);
+    color: var(--hub-text);
+    @apply font-sans antialiased;
     min-height: 100dvh;
     overflow-x: hidden;
   }
@@ -56,15 +89,53 @@
 }
 
 @layer components {
+  .hub-surface {
+    background: var(--hub-surface);
+    color: var(--hub-text);
+    border-color: var(--hub-border);
+  }
+  .hub-canvas {
+    background: var(--hub-canvas);
+    color: var(--hub-text);
+  }
+  .hub-border {
+    border-color: var(--hub-border);
+  }
   .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none;
+    border-radius: 1rem;
+    border: 1px solid var(--hub-border);
+    background: var(--hub-surface);
+    color: var(--hub-text);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  }
+  html.dark .card {
+    box-shadow: none;
   }
   .input-base {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors
-      focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none
-      disabled:cursor-not-allowed disabled:opacity-60
-      aria-invalid:border-rose-500 aria-invalid:ring-rose-500/20
-      dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--hub-border);
+    background: var(--hub-surface);
+    color: var(--hub-text);
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .input-base::placeholder {
+    color: var(--hub-muted);
+  }
+  .input-base:focus {
+    outline: none;
+    border-color: var(--hub-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--hub-accent) 25%, transparent);
+  }
+  .input-base:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .input-base[aria-invalid='true'] {
+    border-color: #e11d48;
+    box-shadow: 0 0 0 3px rgb(225 29 72 / 0.2);
   }
 
   /* Markdown rendering (react-markdown output; raw HTML is never rendered). */
@@ -79,7 +150,7 @@
   .prose-hub ul { @apply my-3 list-disc pl-6; }
   .prose-hub ol { @apply my-3 list-decimal pl-6; }
   .prose-hub li { @apply my-1; }
-  .prose-hub a { @apply text-indigo-600 underline underline-offset-2 dark:text-indigo-400; }
+  .prose-hub a { color: var(--hub-accent-text); text-decoration: underline; text-underline-offset: 2px; }
   .prose-hub blockquote { @apply my-4 border-l-4 border-slate-300 pl-4 text-slate-600 italic dark:border-slate-700 dark:text-slate-400; }
   .prose-hub code { @apply rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.85em] dark:bg-slate-800; }
   .prose-hub pre { @apply my-4 overflow-x-auto rounded-xl bg-slate-900 p-4 text-slate-100; }

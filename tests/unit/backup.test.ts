@@ -33,6 +33,8 @@ const task: Task = {
   priority: 'high',
   status: 'done',
   dueDate: '2024-01-05',
+  dueTime: null,
+  reminderMinutes: null,
   category: '',
   tags: [],
   subtasks: [{ id: 's1', title: 'Transfer', done: true }],

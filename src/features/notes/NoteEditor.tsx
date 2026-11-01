@@ -25,7 +25,8 @@ export function NoteEditor({ noteId, categories }: { noteId: string; categories:
   const confirm = useConfirm();
   const { data: note, loading } = useNote(noteId);
   const { draft, saveState, conflict, update, resolve } = useNoteEditor(db, uid, note);
-  const [preview, setPreview] = useState(false);
+  // Open existing notes in reading mode; switch to edit via the toolbar.
+  const [preview, setPreview] = useState(true);
   const { online } = useSyncState();
 
   if (loading || (note && !draft)) {

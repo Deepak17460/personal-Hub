@@ -12,6 +12,8 @@ export const EMPTY_TASK: TaskFields = {
   priority: 'medium',
   status: 'todo',
   dueDate: null,
+  dueTime: null,
+  reminderMinutes: null,
   category: '',
   tags: [],
   subtasks: [],

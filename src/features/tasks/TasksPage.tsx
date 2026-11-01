@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { CheckSquare, ListChecks, Pencil, Plus, Repeat, Search, Trash2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -21,12 +21,19 @@ import { TaskFormDialog } from './TaskForm';
 type View = 'open' | 'today' | 'upcoming' | 'overdue' | 'done' | 'all';
 type Sort = 'due' | 'priority' | 'updated' | 'title';
 
+const VIEWS: View[] = ['open', 'today', 'upcoming', 'overdue', 'done', 'all'];
+
+function parseView(raw: string | null): View | null {
+  return raw && (VIEWS as string[]).includes(raw) ? (raw as View) : null;
+}
+
 export function filterTasks(tasks: Task[], view: View, today: string): Task[] {
   switch (view) {
     case 'open':
       return tasks.filter((t) => t.status !== 'done');
     case 'today':
-      return tasks.filter((t) => t.status !== 'done' && t.dueDate !== null && t.dueDate <= today);
+      // Exact calendar day — overdue has its own view (dashboard “Due today” links here).
+      return tasks.filter((t) => t.status !== 'done' && t.dueDate === today);
     case 'upcoming':
       return tasks.filter((t) => t.status !== 'done' && t.dueDate !== null && t.dueDate > today);
     case 'overdue':
@@ -61,11 +68,26 @@ export default function TasksPage() {
   const paged = usePagedCollection('tasks');
   const due = useOpenTasksDueBy(today, 100);
 
-  const [view, setView] = useState<View>('open');
+  const [view, setView] = useState<View>(() => parseView(params.get('view')) ?? 'open');
   const [sort, setSort] = useState<Sort>('due');
   const [priority, setPriority] = useState<Priority | ''>('');
   const [category, setCategory] = useState('');
   const [text, setText] = useState('');
+
+  useEffect(() => {
+    const fromUrl = parseView(params.get('view'));
+    if (fromUrl) setView(fromUrl);
+  }, [params]);
+
+  const setViewAndUrl = (next: View) => {
+    setView(next);
+    const nextParams = new URLSearchParams(params);
+    if (next === 'open') nextParams.delete('view');
+    else nextParams.set('view', next);
+    nextParams.delete('new');
+    nextParams.delete('open');
+    setParams(nextParams, { replace: true });
+  };
 
   // Merge recent window with all open tasks due by today, so overdue items are never missed.
   const all = useMemo(() => {
@@ -124,7 +146,7 @@ export default function TasksPage() {
         <Segmented
           label="Task view"
           value={view}
-          onChange={setView}
+          onChange={setViewAndUrl}
           options={[
             { value: 'open', label: 'Open' },
             { value: 'today', label: 'Today' },
@@ -221,7 +243,13 @@ function TaskRow({ task, today, onEdit, onDelete }: { task: Task; today: string;
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <PriorityBadge priority={task.priority} />
           {task.status === 'in_progress' && <Badge tone="indigo">In progress</Badge>}
-          {dueInfo && !done && <Badge tone={dueInfo.tone === 'overdue' ? 'red' : dueInfo.tone === 'today' ? 'sky' : 'neutral'}>{dueInfo.label}</Badge>}
+          {dueInfo && !done && (
+            <Badge tone={dueInfo.tone === 'overdue' ? 'red' : dueInfo.tone === 'today' ? 'sky' : 'neutral'}>
+              {dueInfo.label}
+              {task.dueTime ? ` · ${task.dueTime}` : ''}
+              {task.reminderMinutes != null ? ' · reminder' : ''}
+            </Badge>
+          )}
           {task.recurrence.freq !== 'none' && (
             <Badge tone="violet">
               <Repeat className="h-3 w-3" aria-hidden /> {describeRecurrence(task.recurrence)}

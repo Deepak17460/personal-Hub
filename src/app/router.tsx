@@ -13,6 +13,7 @@ const BookmarksPage = lazy(() => import('@/features/bookmarks/BookmarksPage'));
 const DocumentsPage = lazy(() => import('@/features/documents/DocumentsPage'));
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
 const SearchPage = lazy(() => import('@/features/search/SearchPage'));
+const AssistantPage = lazy(() => import('@/features/assistant/AssistantPage'));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
 
 function NotFound() {
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       { path: 'documents', element: <DocumentsPage /> },
       { path: 'calendar', element: <CalendarPage /> },
       { path: 'search', element: <SearchPage /> },
+      { path: 'assistant', element: <AssistantPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

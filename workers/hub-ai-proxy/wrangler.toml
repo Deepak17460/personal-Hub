@@ -1,0 +1,25 @@
+# Server-to-server Bedrock gateway proxy for Personal Hub.
+# Browser → this Worker → CloudFront gateway (secrets never ship to the client).
+#
+# Deploy:
+#   cd workers/hub-ai-proxy
+#   npx wrangler secret put CHAT_BACKEND_URL      # https://….cloudfront.net/v1
+#   npx wrangler secret put CHAT_BACKEND_API_KEY
+#   npx wrangler deploy
+#
+# Optional:
+#   npx wrangler secret put CHAT_BACKEND_MODEL
+
+name = "personal-hub-ai-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://personal-hub-ea5ea.web.app,https://personal-hub-ea5ea.firebaseapp.com,http://localhost:5173,http://127.0.0.1:5173"
+# Gemini TTS (set GEMINI_API_KEY with: npx wrangler secret put GEMINI_API_KEY)
+GEMINI_TTS_MODEL = "gemini-3.8-flash-tts"
+GEMINI_TTS_FALLBACK_MODEL = "gemini-3.8-flash-lite-tts"
+GEMINI_VOICE = "Charon"
+GEMINI_DAILY_TOKEN_LIMIT = "40000"
+GEMINI_DAILY_REQUEST_LIMIT = "80"
+GEMINI_RPM = "8"

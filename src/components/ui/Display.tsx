@@ -106,7 +106,7 @@ export function TagList({ tags, max = 4 }: { tags: string[]; max?: number }) {
   );
 }
 
-/** Segmented control for small sets of filters. */
+/** Segmented control for small sets of filters. Uses hub CSS vars so dark theme never blanks the active label. */
 export function Segmented<T extends string>({
   value,
   onChange,
@@ -119,24 +119,32 @@ export function Segmented<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            'rounded-lg px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
-            value === o.value
-              ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="inline-flex max-w-full overflow-x-auto rounded-xl p-1"
+      style={{ background: 'var(--hub-surface-2)' }}
+    >
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(o.value)}
+            className={cn('rounded-lg px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors')}
+            style={
+              active
+                ? { background: 'var(--hub-surface)', color: 'var(--hub-text)', boxShadow: '0 1px 2px rgb(0 0 0 / 0.12)' }
+                : { color: 'var(--hub-muted)' }
+            }
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

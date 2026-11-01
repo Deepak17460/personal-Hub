@@ -121,7 +121,7 @@ export function deleteRecord(db: Firestore, uid: string, collection: CollectionN
 }
 
 const FIELD_KEYS: { [C in SimpleCollection]: (keyof FieldsOf[C])[] } = {
-  tasks: ['title', 'description', 'priority', 'status', 'dueDate', 'category', 'tags', 'subtasks', 'recurrence'],
+  tasks: ['title', 'description', 'priority', 'status', 'dueDate', 'dueTime', 'reminderMinutes', 'category', 'tags', 'subtasks', 'recurrence'],
   bookmarks: ['url', 'title', 'description', 'category', 'tags', 'favorite'],
   documents: ['title', 'description', 'category', 'tags', 'externalUrl', 'storageProvider', 'fileType', 'fileSizeBytes'],
   events: ['title', 'description', 'date', 'time', 'kind', 'recurrence', 'reminderMinutes'],
